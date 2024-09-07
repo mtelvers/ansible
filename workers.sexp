@@ -625,6 +625,34 @@
 
   (
    (name worker.yml)
+   (label riscv-worker-04.caelum)
+   (limit (riscv-worker-04.caelum.ci.dev))
+   (vars /run/secrets/worker.yml)
+   (deps (
+     roles/hyperthreading/tasks/main.yml
+     roles/docker/tasks/main.yml
+     roles/worker/tasks/main.yml
+     roles/worker/templates/ocluster-worker.service
+     roles/clarke/tasks/main.yml
+     roles/clarke/templates/clarke.service))
+  )
+
+  (
+   (name worker.yml)
+   (label riscv-worker-05.caelum)
+   (limit (riscv-worker-05.caelum.ci.dev))
+   (vars /run/secrets/worker.yml)
+   (deps (
+     roles/hyperthreading/tasks/main.yml
+     roles/docker/tasks/main.yml
+     roles/worker/tasks/main.yml
+     roles/worker/templates/ocluster-worker.service
+     roles/clarke/tasks/main.yml
+     roles/clarke/templates/clarke.service))
+  )
+
+  (
+   (name worker.yml)
    (label riscv-bm-a1.sw)
    (limit (riscv-bm-a1.sw.ocaml.org))
    (vars /run/secrets/worker.yml)

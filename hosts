@@ -77,6 +77,8 @@ carpenter.caelum.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btr
 riscv-worker-01.caelum.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 riscv-worker-02.caelum.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 riscv-worker-03.caelum.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
+riscv-worker-04.caelum.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
+riscv-worker-05.caelum.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 riscv-bm-a1.sw.ocaml.org builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 riscv-bm-a2.sw.ocaml.org builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 riscv-bm-a3.sw.ocaml.org builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
