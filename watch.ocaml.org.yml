@@ -55,6 +55,7 @@
       copy:
         src: cron-scripts/docker-prune
         dest: /etc/cron.weekly/docker-prune
+        mode: u=rwx,g=rx,o=rx
     - name: set up deployer stack
       docker_stack:
         name: infra
