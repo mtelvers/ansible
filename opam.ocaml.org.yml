@@ -1,0 +1,219 @@
+
+- hosts: opam-4.ocaml.org:opam-5.ocaml.org
+  tasks:
+    - name: apt packages
+      apt:
+        name:
+          - python3-requests
+          - python3-docker
+          - python3-jsondiff
+          - docker.io
+        state: present
+
+    - docker_swarm:
+        listen_addr: "127.0.0.1:2377"
+        advertise_addr: "127.0.0.1:2377"
+
+    - name: configure queuing discipline for network devices
+      sysctl:
+        name: net.core.default_qdisc
+        value: 'fq'
+
+    - name: configure tcp congestion control
+      sysctl:
+        name: net.ipv4.tcp_congestion_control
+        value: 'bbr'
+
+    - name: create nginx directory
+      file:
+        path: /etc/nginx/conf.d
+        state: directory
+
+    - name: create other to be the other machine in the play
+      set_fact:
+        other: "{{ ansible_play_hosts|difference([inventory_hostname])|join(',') }}"
+
+    - name: configure nginx (http)
+      copy:
+        dest: "/etc/nginx/conf.d/{{ inventory_hostname_short }}-http.conf"
+        content: |
+          server {
+              server_name _;
+          
+              location @proxy {
+                  proxy_pass http://{{ other }};
+              }
+          
+              location ^~ /.well-known/acme-challenge/ {
+                  default_type "text/plain";
+                  root         /var/www/html;
+                  try_files $uri @proxy;
+                  break;
+              }
+          
+              location = /.well-known/acme-challenge/ {
+                  return 404;
+              }
+          
+              location / {
+                return 301 https://$host$request_uri;
+              }
+          }
+
+    - name: stat certificate
+      stat:
+        path: "/var/lib/docker/volumes/letsencrypt/_data/live/{{ inventory_hostname }}/cert.pem"
+      register: cert
+
+    - name: Set up nginx in Docker
+      docker_stack:
+        name: infra
+        compose:
+          - version: "3.8"
+            services:
+              nginx:
+                deploy:
+                  mode: global
+                ports:
+                  - target: 80
+                    published: 80
+                    protocol: tcp
+                    mode: host
+                image: nginx
+                volumes:
+                  - /etc/nginx/conf.d:/etc/nginx/conf.d:ro
+                  - wwwroot:/var/www/html
+                  - letsencrypt:/etc/letsencrypt:ro
+            volumes:
+              wwwroot:
+                external: true
+              letsencrypt:
+                external: true
+      when: not cert.stat.exists
+
+    - name: Wait for nginx to start
+      command: curl localhost:80
+      register: curl
+      until: not curl.rc
+      retries: 20
+      delay: 3
+      when: not cert.stat.exists
+
+    - name: get certificates
+      command: docker run --rm -v wwwroot:/var/www/html -v letsencrypt:/etc/letsencrypt certbot/certbot certonly --webroot -m mark@tarides.com --agree-tos --no-eff-email -d {{ item }} --webroot-path /var/www/html
+      with_items:
+        - "{{ inventory_hostname }}"
+        - opam.ocaml.org
+      when: not cert.stat.exists
+
+    - name: configure nginx (https)
+      copy:
+        dest: "/etc/nginx/conf.d/{{ inventory_hostname_short }}.conf"
+        content: |
+          server {
+              server_name {{ inventory_hostname }};
+          
+              location / {
+                  resolver 127.0.0.11 [::1]:5353 valid=15s;
+                  set $opam_live "opam_live";
+                  proxy_pass http://$opam_live;
+              }
+          
+              listen 443 ssl http2;
+              ssl_protocols TLSv1.2 TLSv1.3;
+              ssl_certificate /etc/letsencrypt/live/{{ inventory_hostname }}/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/{{ inventory_hostname }}/privkey.pem;
+          }
+
+    - name: configure nginx (opam.ocaml.org)
+      copy:
+        dest: "/etc/nginx/conf.d/opam.conf"
+        content: |
+          server {
+              server_name opam.ocaml.org;
+          
+              location / {
+                  resolver 127.0.0.11 [::1]:5353 valid=15s;
+                  set $opam_live "opam_live";
+                  proxy_pass http://$opam_live;
+              }
+          
+              listen 443 ssl http2;
+              ssl_protocols TLSv1.2 TLSv1.3;
+              ssl_certificate /etc/letsencrypt/live/opam.ocaml.org/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/opam.ocaml.org/privkey.pem;
+          }
+
+    - name: configure nginx (staging.opam.ocaml.org)
+      copy:
+        dest: "/etc/nginx/conf.d/staging.conf"
+        content: |
+          server {
+              server_name staging.opam.ocaml.org;
+          
+              location / {
+                  resolver 127.0.0.11 [::1]:5353 valid=15s;
+                  set $opam_staging "opam_staging";
+                  proxy_pass http://$opam_staging;
+              }
+          
+              listen 443 ssl http2;
+              ssl_protocols TLSv1.2 TLSv1.3;
+              ssl_certificate /etc/letsencrypt/live/staging.opam.ocaml.org/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/staging.opam.ocaml.org/privkey.pem;
+          }
+
+    - name: login to registry.ci.dev
+      docker_login:
+        username: ocurrent
+        password: "{{ ocurrent_password }}"
+      changed_when: false
+
+    - name: set up Docker stack
+      docker_stack:
+        name: infra
+        with_registry_auth: true
+        compose:
+          - version: "3.8"
+            services:
+              nginx:
+                deploy:
+                  mode: global
+                ports:
+                  - target: 80
+                    published: 80
+                    protocol: tcp
+                    mode: host
+                  - target: 443
+                    published: 443
+                    protocol: tcp
+                    mode: host
+                image: nginx
+                volumes:
+                  - /etc/nginx/conf.d:/etc/nginx/conf.d:ro
+                  - wwwroot:/var/www/html
+                  - letsencrypt:/etc/letsencrypt:ro
+              opam_live:
+                image: registry.ci.dev/opam.ocaml.org:live
+                command: --root /usr/share/caddy
+              opam_staging:
+                image: registry.ci.dev/opam.ocaml.org:staging
+                command: --root /usr/share/caddy
+            volumes:
+              wwwroot:
+                external: true
+              letsencrypt:
+                external: true
+
+    - name: install certbot renewal script
+      copy:
+        src: cron-scripts/letsencrypt-renew
+        dest: /etc/cron.daily/letsencrypt-renew
+        mode: u=rwx,g=rx,o=rx
+
+    - name: install docker-prune script
+      copy:
+        src: cron-scripts/docker-prune
+        dest: /etc/cron.hourly/docker-prune
+        mode: u=rwx,g=rx,o=rx
+

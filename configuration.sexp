@@ -133,5 +133,11 @@
      cron-scripts/clear-log
      cron-scripts/docker-prune))
   )
-  
+  (
+   (name opam.ocaml.org.yml)
+   (vars /run/secrets/opam.ocaml.org.yml)
+   (deps (
+     cron-scripts/letsencrypt-renew
+     cron-scripts/docker-prune))
+  )
 )))
