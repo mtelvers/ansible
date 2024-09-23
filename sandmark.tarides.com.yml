@@ -1,0 +1,59 @@
+---
+
+- hosts: scheduler.ci.dev
+  name: Set up Docker
+  roles:
+    #    - docker
+    - deployer-key
+
+- hosts: scheduler.ci.dev
+  name: Set up SwarmKit
+  tasks:
+    - docker_swarm:
+        listen_addr: "127.0.0.1:2377"
+        advertise_addr: "127.0.0.1:2377"
+
+- hosts: scheduler.ci.dev
+  name: Install base-image builder
+  tasks:
+    - name: create caddy directory
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - /etc/caddy
+        - /etc/caddy/caddy.d
+    - name: caddy machine wide configuration
+      copy:
+        dest: /etc/caddy/Caddyfile
+        content: |
+          import /etc/caddy/caddy.d/*
+    - name: configure caddy for sandmark.tarides.com
+      template:
+        src: caddy/sandmark.tarides.com
+        dest: /etc/caddy/caddy.d/sandmark.tarides.com
+      notify:
+        - restart caddy
+    - name: set up sandmark builder stack
+      docker_stack:
+          name: sandmark
+          prune: yes
+          compose:
+            - version: "3.7"
+              networks:
+                infra_default:
+                  external: true
+              services:
+                sandmark:
+                  image: ocurrent/sandmark-nightly:live
+                  ports:
+                    - '8501:8501'
+                  sysctls:
+                    - 'net.ipv4.tcp_keepalive_time=60'
+                  networks:
+                    - infra_default
+  handlers:
+    - name: restart caddy
+      shell:
+        cmd: PS=$(docker ps --filter=name=infra_caddy -q) && if [ -n "$PS" ] ; then docker exec -w /etc/caddy $PS caddy reload ; fi
+

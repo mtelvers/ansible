@@ -140,4 +140,9 @@
      cron-scripts/letsencrypt-renew
      cron-scripts/docker-prune))
   )
+  (
+   (name sandmark.tarides.com.yml)
+   (deps (
+     caddy/sandmark.tarides.com))
+  )
 )))
