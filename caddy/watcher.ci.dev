@@ -1,0 +1,7 @@
+watcher.ocamllabs.io {
+	redir https://watcher.ci.dev{uri} permanent
+}
+
+watcher.ci.dev {
+	reverse_proxy watcher:8080
+}

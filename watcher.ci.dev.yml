@@ -1,0 +1,81 @@
+---
+
+- hosts: scheduler.ci.dev
+  name: Set up Docker
+  roles:
+    #    - docker
+    - deployer-key
+
+- hosts: scheduler.ci.dev
+  name: Set up SwarmKit
+  tasks:
+    - docker_swarm:
+        listen_addr: "127.0.0.1:2377"
+        advertise_addr: "127.0.0.1:2377"
+
+- hosts: scheduler.ci.dev
+  name: Install base-image builder
+  tasks:
+    - name: copy Docker secrets
+      docker_secret:
+        name: "{{ item }}"
+        data: "{{ lookup('vars', item) | b64encode }}"
+        data_is_b64: true
+      loop:
+        - ocurrentorg-key
+        - ocurrentorg-secret
+        - ocurrentorg-ssh
+        - ocurrentorg-slack
+    - name: create caddy directory
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - /etc/caddy
+        - /etc/caddy/caddy.d
+    - name: caddy machine wide configuration
+      copy:
+        dest: /etc/caddy/Caddyfile
+        content: |
+          import /etc/caddy/caddy.d/*
+    - name: configure caddy for watcher.ci.dev
+      template:
+        src: caddy/watcher.ci.dev
+        dest: /etc/caddy/caddy.d/watcher.ci.dev
+      notify:
+        - restart caddy
+    - name: set up ocurrent.org watcher stack
+      docker_stack:
+        name: ocurrent_org
+        prune: yes
+        compose:
+          - version: "3.7"
+            secrets:
+              ocurrentorg-key:
+                external: true
+              ocurrentorg-ssh:
+                external: true
+              ocurrentorg-secret:
+                external: true
+              ocurrentorg-slack:
+                external: true
+            networks:
+              infra_default:
+                external: true
+            services:
+              watcher:
+                image: ocurrent/ocurrent.org:live-engine
+                command: --github-account-allowlist="ocurrent,maiste,mtelvers" --github-app-id="232252"  --github-private-key-file="/run/secrets/ocurrentorg-key" --github-webhook-secret-file="/run/secrets/ocurrentorg-secret" --branch=live-engine -v --slack="/run/secrets/ocurrentorg-slack"
+                secrets:
+                  - "ocurrentorg-key"
+                  - source: "ocurrentorg-ssh"
+                    mode: 0600
+                  - "ocurrentorg-secret"
+                  - "ocurrentorg-slack"
+                networks:
+                  - infra_default
+  handlers:
+    - name: restart caddy
+      shell:
+        cmd: PS=$(docker ps --filter=name=infra_caddy -q) && if [ -n "$PS" ] ; then docker exec -w /etc/caddy $PS caddy reload ; fi
+

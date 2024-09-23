@@ -145,4 +145,10 @@
    (deps (
      caddy/sandmark.tarides.com))
   )
+  (
+   (name watcher.ci.dev.yml)
+   (vars /run/secrets/watcher.ci.dev.yml)
+   (deps (
+     caddy/watcher.ci.dev))
+  )
 )))
