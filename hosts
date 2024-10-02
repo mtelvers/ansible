@@ -18,6 +18,7 @@ ocaml.ci.dev
 opam.ci.ocaml.org
 opam-4.ocaml.org
 opam-5.ocaml.org
+get.dune.build
 
 [all:vars]
 state_dir=/var/cache/obuilder/ocluster

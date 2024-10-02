@@ -151,4 +151,10 @@
    (deps (
      caddy/watcher.ci.dev))
   )
+  (
+   (name get.dune.build.yml)
+   (deps (
+     caddy/get.dune.build
+     cron-scripts/docker-prune))
+  )
 )))

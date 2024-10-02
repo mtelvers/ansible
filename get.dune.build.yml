@@ -1,0 +1,64 @@
+---
+
+- hosts: get.dune.build
+  name: Dune Binary Distribution
+  tasks:
+    - name: Set up SwarmKit
+      docker_swarm:
+        listen_addr: "127.0.0.1:2377"
+        advertise_addr: "127.0.0.1:2377"
+
+    - name: create caddy directory
+      file:
+        path: /etc/caddy
+        state: directory
+
+    - name: configure caddy
+      copy:
+        src: caddy/get.dune.build
+        dest: /etc/caddy/Caddyfile
+      notify:
+        - restart caddy
+
+    - name: install docker-prune script
+      copy:
+        src: cron-scripts/docker-prune
+        dest: /etc/cron.daily/docker-prune
+        mode: u=rwx,g=rx,o=rx
+
+    - name: set up deployer stack
+      docker_stack:
+        name: infra
+        prune: yes
+        compose:
+          - version: "3.7"
+            services:
+              caddy:
+                image: caddy
+                restart: always
+                deploy:
+                  mode: global
+                ports:
+                - target: 80
+                  published: 80
+                  protocol: tcp
+                - target: 443
+                  published: 443
+                  protocol: tcp
+                volumes:
+                  - /etc/caddy:/etc/caddy:ro
+                  - caddy_config:/config
+                  - caddy_data:/data
+                  - /dune:/dune
+              www:
+                image: ocurrent/dune-binary-distribution:live
+            volumes:
+              caddy_config:
+              caddy_data:
+              dune:
+                external: true
+
+  handlers:
+    - name: restart caddy
+      shell:
+        cmd: PS=$(docker ps --filter=name=infra_caddy -q) && if [ -n "$PS" ] ; then docker exec -w /etc/caddy $PS caddy reload ; fi
