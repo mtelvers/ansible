@@ -7,6 +7,6 @@ download.dune.ci.dev, get.dune.build {
 	file_server
 }
 
-preview.dune.build {
+dune.ci.dev, preview.dune.build {
 	reverse_proxy www:80
 }
