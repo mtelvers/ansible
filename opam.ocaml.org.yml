@@ -131,10 +131,6 @@
       copy:
         dest: "/etc/nginx/conf.d/opam.conf"
         content: |
-          upstream opam_live {
-              server opam_live;
-          }
-
           server {
               server_name opam.ocaml.org;
           
