@@ -1,0 +1,130 @@
+
+- hosts: ci.mirageos.org
+  name: install default roles
+  roles:
+    #    - docker
+    - deployer-key
+
+- hosts: ci.mirageos.org
+  name: Set up SwarmKit
+  tasks:
+    - docker_swarm:
+        listen_addr: "127.0.0.1:2377"
+        advertise_addr: "127.0.0.1:2377"
+
+- hosts: ci.mirageos.org
+  tasks:
+    - name: copy Docker secrets
+      docker_secret:
+        name: "{{ item }}"
+        data: "{{ lookup('vars', item) | b64encode }}"
+        data_is_b64: true
+      loop:
+        - deployer-github-key
+        - deployer-github-oauth
+        - deployer-slack
+        - deployer-ssh-key
+        - deployer-submission-cap
+        - deployer-webhook-secret
+        - ocurrentbuilder-password
+        - ocurrent-hub
+    - name: create caddy directory
+      file:
+        path: /etc/caddy
+        state: directory
+    - name: configure caddy
+      copy:
+        src: caddy/ci.mirageos.org
+        dest: /etc/caddy/Caddyfile
+      notify:
+        - restart caddy
+    - name: install docker-prune script
+      copy:
+        src: cron-scripts/docker-prune
+        dest: /etc/cron.weekly/docker-prune
+        mode: u=rwx,g=rx,o=rx
+    - name: Set up infrastructure stack
+      docker_stack:
+        name: infra
+        prune: yes
+        compose:
+          - version: "3.7"
+            services:
+              caddy:
+                image: caddy
+                ports:
+                  - '80:80'
+                  - '443:443'
+                volumes:
+                  - /etc/caddy:/etc/caddy:ro
+                  - caddy_data:/data
+                  - caddy_config:/config
+              mirage-ci:
+                image: ocurrent/mirage-ci:live
+                command: --ocluster-cap /cap/mirage-ci.cap --github-webhook-secret-file /cap/webhook_secret --github-token-file /cap/github_mirage --test-mirage-4 mirage,skeleton,dev,overlay
+                volumes:
+                  - '/home/camel/.ssh:/ssh:ro'
+                  - '/home/camel/mirage-ci/cap:/cap:ro'
+                  - '/var/run/docker.sock:/var/run/docker.sock'
+                  - 'mirage-ci:/var/lib/ocurrent'
+                sysctls:
+                  - 'net.ipv4.tcp_keepalive_time=60'
+                environment:
+                  - "CI_PROFILE=production"
+              gogs:
+                image: gogs/gogs
+                ports:
+                  - '10022:22'
+                  - '3000:8081'
+                volumes:
+                  - '/data/gogs:/data'
+                  - gogs_backup:/backup
+              deployer:
+                image: ocurrent/deploy.mirageos.org:live
+                command: --github-app-id 54383 --github-private-key-file /run/secrets/deployer-github-key --github-account-allowlist mirage --slack /run/secrets/deployer-slack --confirm above-average --confirm-auto-release 120 --github-oauth /run/secrets/deployer-github-oauth --github-webhook-secret-file /run/secrets/deployer-webhook-secret --submission-service /run/secrets/deployer-submission-cap --staging-password-file /run/secrets/ocurrentbuilder-password -v --flavour mirage
+                ports:
+                  - '8080:8080'
+                volumes:
+                  - 'deployer-data:/var/lib/ocurrent'
+                  - '/var/run/docker.sock:/var/run/docker.sock'
+                secrets:
+                  - deployer-github-key
+                  - deployer-github-oauth
+                  - deployer-slack
+                  - deployer-webhook-secret
+                  - deployer-submission-cap
+                  - ocurrent-hub
+                  - ocurrentbuilder-password
+                  - source: 'deployer-ssh-key'
+                    mode: 0400
+                sysctls:
+                  - 'net.ipv4.tcp_keepalive_time=60'
+            volumes:
+              mirage-ci:
+                external: true
+              caddy_data:
+                external: true
+              caddy_config:
+              gogs_backup:
+              deployer-data:
+            secrets:
+              deployer-github-key:
+                external: true
+              deployer-github-oauth:
+                external: true
+              deployer-slack:
+                external: true
+              deployer-ssh-key:
+                external: true
+              deployer-submission-cap:
+                external: true
+              deployer-webhook-secret:
+                external: true
+              ocurrentbuilder-password:
+                external: true
+              ocurrent-hub:
+                external: true
+  handlers:
+    - name: restart caddy
+      shell:
+        cmd: PS=$(docker ps --filter=label=com.docker.swarm.service.name=infra_caddy -q) && if [ -n "$PS" ] ; then docker exec -w /etc/caddy $PS caddy reload ; fi
