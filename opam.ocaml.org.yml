@@ -110,13 +110,15 @@
       copy:
         dest: "/etc/nginx/conf.d/{{ inventory_hostname_short }}.conf"
         content: |
+          upstream opam_live {
+              server opam_live;
+          }
+
           server {
               server_name {{ inventory_hostname }};
           
               location / {
-                  resolver 127.0.0.11 [::1]:5353 valid=15s;
-                  set $opam_live "opam_live";
-                  proxy_pass http://$opam_live;
+                  proxy_pass http://opam_live;
               }
           
               listen 443 ssl http2;
@@ -133,9 +135,7 @@
               server_name opam.ocaml.org;
           
               location / {
-                  resolver 127.0.0.11 [::1]:5353 valid=15s;
-                  set $opam_live "opam_live";
-                  proxy_pass http://$opam_live;
+                  proxy_pass http://opam_live;
               }
           
               listen 443 ssl http2;
@@ -151,6 +151,7 @@
           upstream opam_staging {
               server opam_staging;
           }
+
           server {
               server_name staging.opam.ocaml.org;
           
@@ -196,7 +197,6 @@
                   - letsencrypt:/etc/letsencrypt:ro
               opam_live:
                 image: registry.ci.dev/opam.ocaml.org:live
-                command: --root /usr/share/caddy
               opam_staging:
                 image: registry.ci.dev/opam.ocaml.org:staging
             volumes:
