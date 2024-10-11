@@ -1,0 +1,15 @@
+ci.mirage.io {
+	redir https://ci.mirageos.org{uri} permanent
+}
+
+deploy.mirage.io {
+	redir https://deploy.mirageos.org{uri} permanent
+}
+
+ci.mirageos.org {
+	reverse_proxy mirage-ci:8080
+}
+
+deploy.mirageos.org {
+	reverse_proxy deployer:8080
+}
