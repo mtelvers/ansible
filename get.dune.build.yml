@@ -52,6 +52,8 @@
                   - /dune:/dune
               www:
                 image: ocurrent/dune-binary-distribution:live
+              staging:
+                image: ocurrent/dune-binary-distribution:staging
             volumes:
               caddy_config:
               caddy_data:

@@ -18,3 +18,7 @@ get.dune.build {
 preview.dune.build {
         reverse_proxy www:80
 }
+
+staging-preview.dune.build {
+        reverse_proxy staging:80
+}
