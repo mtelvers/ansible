@@ -53,6 +53,15 @@ scrape_configs:
     static_configs:
     - targets: ['opam-repo.ci.ocaml.org']
 
+  - job_name: 'staging.ocaml.org'
+    scheme: https
+    basic_auth:
+      username: prometheus
+      password: {{ prometheus_password_plain }}
+    metrics_path: '/host/metrics'
+    static_configs:
+    - targets: ['staging.ocaml.org']
+
   - job_name: 'winter'
     basic_auth:
       username: sandmark
