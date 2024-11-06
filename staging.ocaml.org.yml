@@ -4,6 +4,7 @@
   name: Set up Docker
   roles:
     - deployer-key
+    - prometheus-node-exporter
 
 - hosts: v3c.ocaml.org
   name: Set up SwarmKit
