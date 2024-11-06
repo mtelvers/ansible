@@ -21,7 +21,7 @@
         path: /etc/caddy
         state: directory
     - name: configure caddy
-      copy:
+      template:
         src: caddy/staging.ocaml.org
         dest: /etc/caddy/Caddyfile
       notify:
