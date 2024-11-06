@@ -4,6 +4,7 @@
   name: Set up Docker
   roles:
     - deployer-key
+    - prometheus-node-exporter
 
 - hosts: v3b.ocaml.org
   name: Set up SwarmKit
@@ -20,7 +21,7 @@
         path: /etc/caddy
         state: directory
     - name: configure caddy
-      copy:
+      template:
         src: caddy/www.ocaml.org
         dest: /etc/caddy/Caddyfile
       notify:
