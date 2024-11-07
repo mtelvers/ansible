@@ -81,6 +81,7 @@
      caddy/scheduler.ci.dev
      cron-scripts/clear-log
      cron-scripts/docker-prune
+     prometheus/prometheus-scheduler.yml
      roles/docker/tasks/main.yml
      roles/deployer-key/tasks/main.yml
      roles/deployer-key/files/id_rsa.pub)
