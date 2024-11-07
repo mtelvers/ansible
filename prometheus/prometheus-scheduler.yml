@@ -107,3 +107,13 @@ scrape_configs:
 
 {% endfor %}
 
+  # Windows amd64
+
+{% for builder in 'alpha', 'odawa' %}
+  - job_name: {{ builder }}
+    metrics_path: /pool/windows-amd64/worker/{{ builder }}/metrics
+    static_configs:
+    - targets: ['scheduler:9090']
+
+{% endfor %}
+
