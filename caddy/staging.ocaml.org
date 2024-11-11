@@ -1,4 +1,10 @@
+{
+	cache
+}
 v3c.ocaml.org, staging.ocaml.org {
+	cache {
+		ttl 240s
+	}
 	handle /host/metrics {
 		basic_auth bcrypt {
 			prometheus {{ prometheus_password }}
