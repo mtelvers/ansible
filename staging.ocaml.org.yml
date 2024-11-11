@@ -50,7 +50,7 @@
                     published: 443
                     protocol: tcp
                     mode: host
-                image: caddy
+                image: shonfeder/caddy-cache-handler
                 volumes:
                   - /etc/caddy:/etc/caddy:ro
                   - caddy_data:/data
