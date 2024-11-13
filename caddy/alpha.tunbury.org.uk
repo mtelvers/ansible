@@ -1,0 +1,18 @@
+alpha.tunbury.org.uk {
+	handle /manuals* {
+		uri replace /manuals/ /html-compiler-manuals/
+		reverse_proxy https://ocaml-web.github.io {
+			header_up Host {upstream_hostport}
+			@error status 404 500 503
+			handle_response @error {
+				rewrite * /{rp.status_code}.html
+			}
+			@redirect status 3xx
+			handle_response @redirect {
+				@locate vars_regexp location {rp.header.Location} (https?://)?([a-zA-Z0-9-.]+)/html-compiler-manuals/(.*)
+				redir @locate /manuals/{re.location.3}
+			}
+		}
+	}
+	reverse_proxy www1:8080 www2:8080 www3:8080
+}

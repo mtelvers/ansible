@@ -20,6 +20,7 @@ opam-4.ocaml.org
 opam-5.ocaml.org
 get.dune.build
 ci.mirageos.org
+alpha.tunbury.org.uk
 
 [all:vars]
 state_dir=/var/cache/obuilder/ocluster

@@ -55,6 +55,15 @@
    )
   )
   (
+   (name alpha.tunbury.org.uk.yml)
+   (deps (
+     caddy/alpha.tunbury.org.uk
+     cron-scripts/docker-prune
+     roles/deployer-key/tasks/main.yml
+     roles/deployer-key/files/id_rsa.pub)
+   )
+  )
+  (
    (name registry.ci.dev.yml)
    (vars /run/secrets/registry.ci.dev.yml)
   )
