@@ -42,9 +42,11 @@
                 - target: 80
                   published: 80
                   protocol: tcp
+                  mode: host
                 - target: 443
                   published: 443
                   protocol: tcp
+                  mode: host
                 volumes:
                   - /etc/caddy:/etc/caddy:ro
                   - caddy_config:/config
