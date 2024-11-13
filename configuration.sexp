@@ -44,7 +44,6 @@
   )
   (
    (name staging.ci.dev)
-   (vars /run/secrets/staging.ci.dev.yml)
    (deps (
      caddy/staging.ci.dev
      cron-scripts/docker-prune
