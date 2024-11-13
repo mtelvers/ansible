@@ -1,14 +1,21 @@
 ---
 
-- hosts: alpha.tunbury.org.uk
+- hosts: staging.ci.dev
+  name: Set up Docker
+  roles:
+    - docker
+    - deployer-key
+    - prometheus-node-exporter
+
+- hosts: staging.ci.dev
   name: Set up SwarmKit
   tasks:
     - docker_swarm:
         listen_addr: "127.0.0.1:2377"
         advertise_addr: "127.0.0.1:2377"
 
-- hosts: alpha.tunbury.org.uk
-  name: Deploy OCaml.org website
+- hosts: staging.ci.dev
+  name: Deploy staging site for OCaml.org
   tasks:
     - name: create caddy directory
       file:
@@ -16,10 +23,15 @@
         state: directory
     - name: configure caddy
       template:
-        src: caddy/alpha.tunbury.org.uk
+        src: caddy/staging.ci.dev
         dest: /etc/caddy/Caddyfile
       notify:
         - restart caddy
+    - name: install docker-prune script
+      copy:
+        src: cron-scripts/docker-prune
+        dest: /etc/cron.hourly/docker-prune
+        mode: u=rwx,g=rx,o=rx
     - name: set up infrastructure stack
       docker_stack:
         name: infra
@@ -39,21 +51,25 @@
                     published: 443
                     protocol: tcp
                     mode: host
-                image: caddy
+                image: shonfeder/caddy-cache-handler
                 volumes:
                   - /etc/caddy:/etc/caddy:ro
                   - caddy_data:/data
                   - caddy_config:/config
               www1:
-                image: ocurrent/v3.ocaml.org-server:live
+                image: ocurrent/v3.ocaml.org-server:staging
                 sysctls:
                   - 'net.ipv4.tcp_keepalive_time=60'
               www2:
-                image: ocurrent/v3.ocaml.org-server:live
+                image: ocurrent/v3.ocaml.org-server:staging
                 sysctls:
                   - 'net.ipv4.tcp_keepalive_time=60'
               www3:
-                image: ocurrent/v3.ocaml.org-server:live
+                image: ocurrent/v3.ocaml.org-server:staging
+                sysctls:
+                  - 'net.ipv4.tcp_keepalive_time=60'
+              www4:
+                image: ocurrent/v3.ocaml.org-server:staging
                 sysctls:
                   - 'net.ipv4.tcp_keepalive_time=60'
             volumes:
