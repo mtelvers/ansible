@@ -5,6 +5,7 @@
   roles:
     - docker
     - deployer-key
+    - prometheus-node-exporter
 
 - hosts: v3b.ocaml.org
   name: Set up SwarmKit
@@ -80,6 +81,11 @@
               .port = "80";
           }
           
+          backend prometheus {
+              .host = "{{ docker_gateway }}";
+              .port = "9090";
+          }
+          
           sub vcl_init {
               new vdir = directors.round_robin();
               vdir.add_backend(www1);
@@ -87,6 +93,14 @@
           }
           
           sub vcl_recv {
+              if (req.url ~ "^/metrics") {
+                if (!req.http.Authorization ~ "Basic {{ prometheus_password }}") {
+                  return(synth(401, "Restricted"));
+                } else {
+                  set req.backend_hint = prometheus;
+                  return(pipe);
+                }
+              }
               if (req.url ~ "^/\.well-known/acme-challenge/") {
                 set req.backend_hint = nginx;
                 return(pipe);
