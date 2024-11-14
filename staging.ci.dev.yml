@@ -15,6 +15,10 @@
 
 - hosts: staging.ci.dev
   name: Deploy staging site for OCaml.org
+  vars:
+    domains:
+      - staging.ci.dev
+      - v3b.ci.dev
   tasks:
 
     - name: create nginx directory
@@ -141,7 +145,14 @@
           fi
           
           LE=$(docker volume inspect --format '{{ '{{ .Mountpoint }}' }}' infra_letsencrypt)
-          if [[ $LE/live/{{ ansible_host }}/bundle.pem -nt /var/run/monitor ]] ; then
+          UPDATE=0
+          for domain in {{ domains | join(" ") }}; do
+            if [[ $LE/live/$domain/bundle.pem -nt /var/run/monitor ]] ; then
+              UPDATE=1
+            fi
+          done
+
+          if [[ $UPDATE -eq 1 ]] ; then
             /usr/bin/logger -i Updating Hitch
             pkill -SIGHUP hitch
           fi
@@ -198,7 +209,9 @@
         content: |
           #!/bin/bash
           set -eu
-          systemd-cat docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt -v infra_wwwroot:/var/www/html -v /usr/bin/hitch-deploy:/usr/bin/hitch-deploy:ro certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d {{ ansible_host }} --non-interactive --deploy-hook=/usr/bin/hitch-deploy
+          {% for domain in domains %}
+          systemd-cat docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt -v infra_wwwroot:/var/www/html -v /usr/bin/hitch-deploy:/usr/bin/hitch-deploy:ro certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d {{ domain }} --non-interactive --deploy-hook=/usr/bin/hitch-deploy
+          {% endfor %}
 
     - name: install docker-prune script
       copy:
@@ -223,7 +236,7 @@
                     protocol: tcp
                     mode: host
                 image: hitch:latest
-                command: --backend=[varnish]:8080 /etc/letsencrypt/live/{{ ansible_host }}/bundle.pem
+                command: --backend=[varnish]:8080 {{ domains | map("regex_replace", "^(.*)$", "/etc/letsencrypt/live/\1/bundle.pem") | join(" ") }}
                 volumes:
                   - letsencrypt:/etc/letsencrypt:ro
 
