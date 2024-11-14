@@ -17,6 +17,28 @@
   name: Deploy staging site for OCaml.org
   tasks:
 
+    - name: create nginx directory
+      file:
+        path: /etc/nginx/conf.d
+        state: directory
+
+    - name: configure nginx (http)
+      copy:
+        dest: "/etc/nginx/conf.d/certbot.conf"
+        content: |
+          server {
+              server_name _;
+          
+              location ^~ /.well-known/acme-challenge/ {
+                  default_type "text/plain";
+                  root /var/www/html;
+              }
+          
+              location = /.well-known/acme-challenge/ {
+                  return 404;
+              }
+          }
+
     - name: create varnish directory
       file:
         path: /etc/varnish
@@ -46,6 +68,11 @@
               .probe = health;
           }
           
+          backend nginx {
+              .host = "nginx";
+              .port = "80";
+          }
+          
           sub vcl_init {
               new vdir = directors.round_robin();
               vdir.add_backend(www1);
@@ -53,12 +80,17 @@
           }
           
           sub vcl_recv {
+              if (req.url ~ "^/\.well-known/acme-challenge/") {
+                set req.backend_hint = nginx;
+                return(pipe);
+              }
               if ((req.http.X-Forwarded-Proto && req.http.X-Forwarded-Proto != "https") || 
                   (req.http.Scheme && req.http.Scheme != "https")) {
                   return (synth(750));
               } elseif (!req.http.X-Forwarded-Proto && !req.http.Scheme && !proxy.is_ssl()) {
                   return (synth(750));
               }
+              set req.backend_hint = vdir.backend();
           }
           
           sub vcl_synth {
@@ -69,8 +101,15 @@
                   return (deliver);
               }
           }
+          
+          sub vcl_pipe {
+            if (req.backend_hint == nginx) {
+                set req.http.Connection = "close";
+                return(pipe);
+            }
+          }
 
-    - name: configure monitor
+    - name: create monitor script
       copy:
         dest: /usr/bin/monitor
         mode: '0755'
@@ -128,6 +167,15 @@
         enabled: true
         daemon_reload: true
 
+    - name: install certbot renewal script
+      copy:
+        dest: /etc/cron.daily/certbot
+        mode: u=rwx,g=rx,o=rx
+        content: |
+          #!/bin/bash
+          set -eux
+          systemd-cat docker run --rm -it --name certbot -v "infra_letsencrypt:/etc/letsencrypt" -v "infra_wwwroot:/var/www/html" certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d staging.ci.dev --non-interactive
+
     - name: install docker-prune script
       copy:
         src: cron-scripts/docker-prune
@@ -172,6 +220,12 @@
                   - VARNISH_SIZE=2G
                 command: "-a :8080,PROXY -p default_keep=300 -p feature=+http2"
 
+              nginx:
+                image: nginx
+                volumes:
+                  - wwwroot:/var/www/html:ro
+                  - /etc/nginx/conf.d:/etc/nginx/conf.d:ro
+
               www1:
                 image: ocurrent/v3.ocaml.org-server:staging
                 sysctls:
@@ -181,4 +235,7 @@
                 image: ocurrent/v3.ocaml.org-server:staging
                 sysctls:
                   - 'net.ipv4.tcp_keepalive_time=60'
+
+            volumes:
+              wwwroot:
 
