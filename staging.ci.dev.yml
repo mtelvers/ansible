@@ -174,7 +174,7 @@
         content: |
           #!/bin/bash
           set -eux
-          systemd-cat docker run --rm -it --name certbot -v "infra_letsencrypt:/etc/letsencrypt" -v "infra_wwwroot:/var/www/html" certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d staging.ci.dev --non-interactive
+          systemd-cat docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt -v infra_wwwroot:/var/www/html certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d staging.ci.dev --non-interactive
 
     - name: install docker-prune script
       copy:
@@ -199,9 +199,9 @@
                     protocol: tcp
                     mode: host
                 image: hitch:latest
-                command: "--backend=[varnish]:8080"
+                command: --backend=[varnish]:8080 /etc/letsencrypt/bundle.pem
                 volumes:
-                  - "/etc/hitch/cert.pem:/etc/hitch/testcert.pem:ro"
+                  - letsencrypt:/etc/letsencrypt:ro
 
               varnish:
                 deploy:
@@ -213,12 +213,12 @@
                     mode: host
                 image: varnish:stable
                 volumes:
-                  - "/etc/varnish/default.vcl:/etc/varnish/default.vcl"
+                  - /etc/varnish/default.vcl:/etc/varnish/default.vcl
                 tmpfs:
                   - /var/lib/varnish:exec
                 environment:
                   - VARNISH_SIZE=2G
-                command: "-a :8080,PROXY -p default_keep=300 -p feature=+http2"
+                command: -a :8080,PROXY -p default_keep=300 -p feature=+http2
 
               nginx:
                 image: nginx
@@ -238,4 +238,5 @@
 
             volumes:
               wwwroot:
+              letsencrypt:
 
