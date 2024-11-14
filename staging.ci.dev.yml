@@ -70,6 +70,64 @@
               }
           }
 
+    - name: configure monitor
+      copy:
+        dest: /usr/bin/monitor
+        mode: '0755'
+        content: |
+          {% raw %}#!/bin/bash
+          set -eux
+          /usr/bin/logger -i Monitor
+          
+          UPDATE=0
+          for p in www1 www2; do
+            [[ -f /var/run/$p ]] && LAST_WWW=$(< /var/run/$p) || LAST_WWW=''
+            WWW=$(docker ps --filter name=infra_$p -q)
+            if [[ ! "${WWW}" = "${LAST_WWW}" ]] ; then
+              UPDATE=1
+              echo $WWW > /var/run/$p
+            fi
+          done
+          
+          if [[ $UPDATE -eq 1 ]] ; then
+            /usr/bin/logger -i Updating Varnish
+            TIME=$(date +%s)
+            VARNISHADM=$(docker ps --filter=name=infra_varnish -q)
+            docker exec $VARNISHADM varnishadm vcl.load varnish_$TIME /etc/varnish/default.vcl
+            docker exec $VARNISHADM varnishadm vcl.use varnish_$TIME
+            docker exec $VARNISHADM varnishadm "ban req.url ~ ."
+          fi
+          {% endraw %}
+
+    - name: configure monitor
+      copy:
+        dest: /etc/systemd/system/monitor.service
+        content: |
+          [Unit]
+          Description=Check for Docker update
+          [Service]
+          ExecStart=/usr/bin/monitor
+
+    - name: configure monitor timer
+      copy:
+        dest: /etc/systemd/system/monitor.timer
+        content: |
+          [Unit]
+          Description=Check for Docker update
+          [Timer]
+          OnBootSec=120
+          OnUnitActiveSec=15
+          AccuracySec=1s
+          [Install]
+          WantedBy=timers.target
+
+    - name: Enable a timer unit for dnf-automatic
+      ansible.builtin.systemd_service:
+        name: monitor.timer
+        state: started
+        enabled: true
+        daemon_reload: true
+
     - name: install docker-prune script
       copy:
         src: cron-scripts/docker-prune
