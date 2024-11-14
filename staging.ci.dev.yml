@@ -215,7 +215,9 @@
       register: cron
 
     - name: obtain certificates if /etc/cron.daily/certbot changed
-      command: /etc/cron.daily/certbot
+      command: docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt -v infra_wwwroot:/var/www/html certbot/certbot certonly --standalone -m mark@tarides.com --agree-tos --no-eff-email -d {{ item }} --non-interactive
+      with_items:
+        - "{{ domains }}"
       when: cron.changed
 
     - name: install docker-prune script
