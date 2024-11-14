@@ -160,12 +160,29 @@
           [Install]
           WantedBy=timers.target
 
-    - name: Enable a timer unit for dnf-automatic
+    - name: Enable a timer unit for monitor
       ansible.builtin.systemd_service:
         name: monitor.timer
         state: started
         enabled: true
         daemon_reload: true
+
+    - name: create hitch script
+      copy:
+        dest: /usr/bin/hitch-deploy
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          set -eux
+          
+          LE=$(docker volume inspect --format '{{ '{{ .Mountpoint }}' }}' infra_letsencrypt)
+          if [[ ! -f $LE/dhparams.pem ]] ; then
+            openssl dhparam 2048 > $LE/dhparams.pem
+          fi
+          
+          cat $LE/live/{{ ansible_host }}/privkey.pem $LE/live/{{ ansible_host }}/fullchain.pem $LE/dhparams.pem > bundle.pem
+          
+          pkill -SIGHUP hitch
 
     - name: install certbot renewal script
       copy:
@@ -174,7 +191,7 @@
         content: |
           #!/bin/bash
           set -eux
-          systemd-cat docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt -v infra_wwwroot:/var/www/html certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d staging.ci.dev --non-interactive
+          systemd-cat docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt" -v "infra_wwwroot:/var/www/html" -v "/usr/bin/hitch-deploy:/usr/bin/hitch-deploy:ro" certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d {{ ansible_host }} --non-interactive --post-hook="/usr/bin/hitch-deploy"
 
     - name: install docker-prune script
       copy:
