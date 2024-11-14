@@ -114,7 +114,7 @@
         dest: /usr/bin/monitor
         mode: '0755'
         content: |
-          {% raw %}#!/bin/bash
+          #!/bin/bash
           set -eu
           
           UPDATE=0
@@ -140,14 +140,13 @@
             docker exec $VARNISHADM varnishadm "ban req.url ~ ."
           fi
           
-          LE=$(docker volume inspect --format '{{ .Mountpoint }}' infra_letsencrypt)
-          if [[ $LE/bundle.pem -nt /var/run/monitor ]] ; then
+          LE=$(docker volume inspect --format '{{ '{{ .Mountpoint }}' }}' infra_letsencrypt)
+          if [[ $LE/live/{{ ansible_host }}/bundle.pem -nt /var/run/monitor ]] ; then
             /usr/bin/logger -i Updating Hitch
             pkill -SIGHUP hitch
           fi
           
           touch /var/run/monitor
-          {% endraw %}
 
     - name: configure monitor
       copy:
@@ -183,15 +182,14 @@
         dest: /usr/bin/hitch-deploy
         mode: '0755'
         content: |
-          #!/bin/bash
+          #!/bin/sh
           set -eu
           
-          LE=$(docker volume inspect --format '{{ '{{ .Mountpoint }}' }}' infra_letsencrypt)
-          if [[ ! -f $LE/dhparams.pem ]] ; then
-            openssl dhparam 2048 > $LE/dhparams.pem
+          if [[ ! -f $RENEWED_LINEAGE/dhparams.pem ]] ; then
+            openssl dhparam -out $RENEWED_LINEAGE/dhparams.pem 2048 2> /dev/null
           fi
           
-          cat $LE/live/{{ ansible_host }}/privkey.pem $LE/live/{{ ansible_host }}/fullchain.pem $LE/dhparams.pem > bundle.pem
+          cat $RENEWED_LINEAGE/privkey.pem $RENEWED_LINEAGE/fullchain.pem $RENEWED_LINEAGE/dhparams.pem > $RENEWED_LINEAGE/bundle.pem
 
     - name: install certbot renewal script
       copy:
@@ -200,7 +198,7 @@
         content: |
           #!/bin/bash
           set -eu
-          systemd-cat docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt" -v "infra_wwwroot:/var/www/html" -v "/usr/bin/hitch-deploy:/usr/bin/hitch-deploy:ro" certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d {{ ansible_host }} --non-interactive --post-hook="/usr/bin/hitch-deploy"
+          systemd-cat docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt -v infra_wwwroot:/var/www/html -v /usr/bin/hitch-deploy:/usr/bin/hitch-deploy:ro certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d {{ ansible_host }} --non-interactive --deploy-hook=/usr/bin/hitch-deploy
 
     - name: install docker-prune script
       copy:
@@ -225,7 +223,7 @@
                     protocol: tcp
                     mode: host
                 image: hitch:latest
-                command: --backend=[varnish]:8080 /etc/letsencrypt/bundle.pem
+                command: --backend=[varnish]:8080 /etc/letsencrypt/live/{{ ansible_host }}/bundle.pem
                 volumes:
                   - letsencrypt:/etc/letsencrypt:ro
 
