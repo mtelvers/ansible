@@ -44,12 +44,8 @@
   )
   (
    (name www.ocaml.org.yml)
-   (vars /run/secrets/www.ocaml.org.yml)
    (deps (
-     caddy/www.ocaml.org
      cron-scripts/docker-prune
-     roles/prometheus-node-exporter/tasks/main.yml
-     roles/prometheus-node-exporter/templates/prometheus-node-exporter
      roles/deployer-key/tasks/main.yml
      roles/deployer-key/files/id_rsa.pub)
    )

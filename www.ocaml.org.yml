@@ -3,8 +3,8 @@
 - hosts: v3b.ocaml.org
   name: Set up Docker
   roles:
+    - docker
     - deployer-key
-    - prometheus-node-exporter
 
 - hosts: v3b.ocaml.org
   name: Set up SwarmKit
@@ -14,23 +14,221 @@
         advertise_addr: "127.0.0.1:2377"
 
 - hosts: v3b.ocaml.org
-  name: Deploy OCaml.org website
+  name: Deploy site for OCaml.org
+  vars:
+    domains:
+      - ocaml.org
+      - www.ocaml.org
+      - v3b.ocaml.org
+      - v3.ocaml.org
   tasks:
-    - name: create caddy directory
+
+    - name: create nginx directory
       file:
-        path: /etc/caddy
+        path: /etc/nginx/conf.d
         state: directory
-    - name: configure caddy
-      template:
-        src: caddy/www.ocaml.org
-        dest: /etc/caddy/Caddyfile
-      notify:
-        - restart caddy
+
+    - name: configure nginx (http)
+      copy:
+        dest: "/etc/nginx/conf.d/certbot.conf"
+        content: |
+          server {
+              server_name _;
+          
+              location ^~ /.well-known/acme-challenge/ {
+                  default_type "text/plain";
+                  root /var/www/html;
+              }
+          
+              location = /.well-known/acme-challenge/ {
+                  return 404;
+              }
+          }
+
+    - name: create varnish directory
+      file:
+        path: /etc/varnish
+        state: directory
+
+    - name: configure varnish
+      copy:
+        dest: /etc/varnish/default.vcl
+        content: |
+          vcl 4.1;
+          
+          import proxy;
+          import directors;
+          
+          probe health {
+              .url = "/";
+          }
+          
+          backend www1 {
+              .host = "www1";
+              .port = "8080";
+              .probe = health;
+          }
+          
+          backend www2 {
+              .host = "www2";
+              .port = "8080";
+              .probe = health;
+          }
+          
+          backend nginx {
+              .host = "nginx";
+              .port = "80";
+          }
+          
+          sub vcl_init {
+              new vdir = directors.round_robin();
+              vdir.add_backend(www1);
+              vdir.add_backend(www2);
+          }
+          
+          sub vcl_recv {
+              if (req.url ~ "^/\.well-known/acme-challenge/") {
+                set req.backend_hint = nginx;
+                return(pipe);
+              }
+              if ((req.http.X-Forwarded-Proto && req.http.X-Forwarded-Proto != "https") || 
+                  (req.http.Scheme && req.http.Scheme != "https")) {
+                  return (synth(750));
+              } elseif (!req.http.X-Forwarded-Proto && !req.http.Scheme && !proxy.is_ssl()) {
+                  return (synth(750));
+              }
+              set req.backend_hint = vdir.backend();
+          }
+          
+          sub vcl_synth {
+              if (resp.status == 750) {
+                  set resp.status = 301;
+                  set resp.http.location = "https://" + req.http.Host + req.url;
+                  set resp.reason = "Moved";
+                  return (deliver);
+              }
+          }
+          
+          sub vcl_pipe {
+            if (req.backend_hint == nginx) {
+                set req.http.Connection = "close";
+                return(pipe);
+            }
+          }
+
+    - name: create monitor script
+      copy:
+        dest: /usr/bin/monitor
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          set -eu
+          
+          UPDATE=0
+          for p in www1 www2; do
+            WWW=$(docker ps --filter name=infra_$p -q)
+            if [[ -f /var/run/$p ]] ; then 
+              LAST_WWW=$(< /var/run/$p)
+              if [[ ! "${WWW}" = "${LAST_WWW}" ]] ; then
+                UPDATE=1
+                echo $WWW > /var/run/$p
+              fi
+            else
+              echo $WWW > /var/run/$p
+            fi
+          done
+          
+          if [[ $UPDATE -eq 1 ]] ; then
+            /usr/bin/logger -i Updating Varnish
+            TIME=$(date +%s)
+            VARNISHADM=$(docker ps --filter=name=infra_varnish -q)
+            docker exec $VARNISHADM varnishadm vcl.load varnish_$TIME /etc/varnish/default.vcl
+            docker exec $VARNISHADM varnishadm vcl.use varnish_$TIME
+            docker exec $VARNISHADM varnishadm "ban req.url ~ ."
+          fi
+          
+          LE=$(docker volume inspect --format '{{ '{{ .Mountpoint }}' }}' infra_letsencrypt)
+          UPDATE=0
+          for domain in {{ domains | join(" ") }}; do
+            if [[ $LE/live/$domain/bundle.pem -nt /var/run/monitor ]] ; then
+              UPDATE=1
+            fi
+          done
+          
+          if [[ $UPDATE -eq 1 ]] ; then
+            /usr/bin/logger -i Updating Hitch
+            pkill -SIGHUP hitch
+          fi
+          
+          touch /var/run/monitor
+
+    - name: configure monitor
+      copy:
+        dest: /etc/systemd/system/monitor.service
+        content: |
+          [Unit]
+          Description=Check for Docker container update
+          [Service]
+          ExecStart=/usr/bin/monitor
+
+    - name: configure monitor timer
+      copy:
+        dest: /etc/systemd/system/monitor.timer
+        content: |
+          [Unit]
+          Description=Check for Docker update
+          [Timer]
+          OnBootSec=120
+          OnUnitActiveSec=15
+          AccuracySec=1s
+          [Install]
+          WantedBy=timers.target
+
+    - name: enable a timer unit for monitor
+      ansible.builtin.systemd_service:
+        name: monitor.timer
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: create hitch script
+      copy:
+        dest: /usr/bin/hitch-deploy
+        mode: '0755'
+        content: |
+          #!/bin/sh
+          set -eu
+          
+          if [ ! -f $RENEWED_LINEAGE/dhparams.pem ] ; then
+            openssl dhparam -out $RENEWED_LINEAGE/dhparams.pem 2048 2> /dev/null
+          fi
+          
+          cat $RENEWED_LINEAGE/privkey.pem $RENEWED_LINEAGE/fullchain.pem $RENEWED_LINEAGE/dhparams.pem > $RENEWED_LINEAGE/bundle.pem
+
+    - name: install certbot renewal script
+      copy:
+        dest: /etc/cron.daily/certbot
+        mode: u=rwx,g=rx,o=rx
+        content: |
+          #!/bin/bash
+          set -eu
+          {% for domain in domains %}
+          systemd-cat docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt -v infra_wwwroot:/var/www/html -v /usr/bin/hitch-deploy:/usr/bin/hitch-deploy:ro certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d {{ domain }} --non-interactive --deploy-hook=/usr/bin/hitch-deploy
+          {% endfor %}
+      register: cron
+
+    - name: obtain certificates if /etc/cron.daily/certbot changed
+      command: docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt -v infra_wwwroot:/var/www/html -v /usr/bin/hitch-deploy:/usr/bin/hitch-deploy:ro -p 80:80 certbot/certbot certonly --standalone -m mark@tarides.com --agree-tos --no-eff-email -d {{ item }} --non-interactive --deploy-hook=/usr/bin/hitch-deploy
+      with_items:
+        - "{{ domains }}"
+      when: cron.changed
+
     - name: install docker-prune script
       copy:
         src: cron-scripts/docker-prune
         dest: /etc/cron.hourly/docker-prune
         mode: u=rwx,g=rx,o=rx
+
     - name: set up infrastructure stack
       docker_stack:
         name: infra
@@ -38,7 +236,21 @@
         compose:
           - version: "3.7"
             services:
-              caddy:
+
+              hitch:
+                deploy:
+                  mode: global
+                ports:
+                  - target: 443
+                    published: 443
+                    protocol: tcp
+                    mode: host
+                image: hitch:latest
+                command: --backend=[varnish]:8080 {{ domains | map("regex_replace", "^(.*)$", "/etc/letsencrypt/live/\1/bundle.pem") | join(" ") }}
+                volumes:
+                  - letsencrypt:/etc/letsencrypt:ro
+
+              varnish:
                 deploy:
                   mode: global
                 ports:
@@ -46,24 +258,32 @@
                     published: 80
                     protocol: tcp
                     mode: host
-                  - target: 443
-                    published: 443
-                    protocol: tcp
-                    mode: host
-                image: caddy
+                image: varnish:stable
                 volumes:
-                  - /etc/caddy:/etc/caddy:ro
-                  - caddy_data:/data
-                  - caddy_config:/config
-              www:
+                  - /etc/varnish/default.vcl:/etc/varnish/default.vcl
+                tmpfs:
+                  - /var/lib/varnish:exec
+                environment:
+                  - VARNISH_SIZE=2G
+                command: -a :8080,PROXY -p default_keep=300 -p feature=+http2
+
+              nginx:
+                image: nginx
+                volumes:
+                  - wwwroot:/var/www/html:ro
+                  - /etc/nginx/conf.d:/etc/nginx/conf.d:ro
+
+              www1:
                 image: ocurrent/v3.ocaml.org-server:live
                 sysctls:
                   - 'net.ipv4.tcp_keepalive_time=60'
+
+              www2:
+                image: ocurrent/v3.ocaml.org-server:live
+                sysctls:
+                  - 'net.ipv4.tcp_keepalive_time=60'
+
             volumes:
-              caddy_data:
-              caddy_config:
-  handlers:
-    - name: restart caddy
-      shell:
-        cmd: PS=$(docker ps --filter=name=infra_caddy -q) && if [ -n "$PS" ] ; then docker exec -w /etc/caddy $PS caddy reload ; fi
+              wwwroot:
+              letsencrypt:
 
