@@ -212,6 +212,11 @@
           {% for domain in domains %}
           systemd-cat docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt -v infra_wwwroot:/var/www/html -v /usr/bin/hitch-deploy:/usr/bin/hitch-deploy:ro certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d {{ domain }} --non-interactive --deploy-hook=/usr/bin/hitch-deploy
           {% endfor %}
+      register: cron
+
+    - name: obtain certificates if /etc/cron.daily/certbot changed
+      command: /etc/cron.daily/certbot
+      when: cron.changed
 
     - name: install docker-prune script
       copy:
