@@ -115,15 +115,18 @@
         mode: '0755'
         content: |
           {% raw %}#!/bin/bash
-          set -eux
-          /usr/bin/logger -i Monitor
+          set -eu
           
           UPDATE=0
           for p in www1 www2; do
-            [[ -f /var/run/$p ]] && LAST_WWW=$(< /var/run/$p) || LAST_WWW=''
             WWW=$(docker ps --filter name=infra_$p -q)
-            if [[ ! "${WWW}" = "${LAST_WWW}" ]] ; then
-              UPDATE=1
+            if [[ -f /var/run/$p ]] ; then 
+              LAST_WWW=$(< /var/run/$p)
+              if [[ ! "${WWW}" = "${LAST_WWW}" ]] ; then
+                UPDATE=1
+                echo $WWW > /var/run/$p
+              fi
+            else
               echo $WWW > /var/run/$p
             fi
           done
@@ -136,6 +139,14 @@
             docker exec $VARNISHADM varnishadm vcl.use varnish_$TIME
             docker exec $VARNISHADM varnishadm "ban req.url ~ ."
           fi
+          
+          LE=$(docker volume inspect --format '{{ .Mountpoint }}' infra_letsencrypt)
+          if [[ $LE/bundle.pem -nt /var/run/monitor ]] ; then
+            /usr/bin/logger -i Updating Hitch
+            pkill -SIGHUP hitch
+          fi
+          
+          touch /var/run/monitor
           {% endraw %}
 
     - name: configure monitor
@@ -143,7 +154,7 @@
         dest: /etc/systemd/system/monitor.service
         content: |
           [Unit]
-          Description=Check for Docker update
+          Description=Check for Docker container update
           [Service]
           ExecStart=/usr/bin/monitor
 
@@ -173,7 +184,7 @@
         mode: '0755'
         content: |
           #!/bin/bash
-          set -eux
+          set -eu
           
           LE=$(docker volume inspect --format '{{ '{{ .Mountpoint }}' }}' infra_letsencrypt)
           if [[ ! -f $LE/dhparams.pem ]] ; then
@@ -181,8 +192,6 @@
           fi
           
           cat $LE/live/{{ ansible_host }}/privkey.pem $LE/live/{{ ansible_host }}/fullchain.pem $LE/dhparams.pem > bundle.pem
-          
-          pkill -SIGHUP hitch
 
     - name: install certbot renewal script
       copy:
@@ -190,7 +199,7 @@
         mode: u=rwx,g=rx,o=rx
         content: |
           #!/bin/bash
-          set -eux
+          set -eu
           systemd-cat docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt" -v "infra_wwwroot:/var/www/html" -v "/usr/bin/hitch-deploy:/usr/bin/hitch-deploy:ro" certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d {{ ansible_host }} --non-interactive --post-hook="/usr/bin/hitch-deploy"
 
     - name: install docker-prune script
