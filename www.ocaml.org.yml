@@ -292,7 +292,7 @@
                     published: 80
                     protocol: tcp
                     mode: host
-                image: varnish:stable
+                image: varnish:7.5
                 volumes:
                   - /etc/varnish:/etc/varnish
                 tmpfs:
