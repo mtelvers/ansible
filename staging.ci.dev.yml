@@ -102,6 +102,9 @@
                 set req.backend_hint = nginx;
                 return(pipe);
               }
+              if (req.http.host != "{{ domains[0] }}") {
+                  return (synth(301, "https://{{ domains[0] }}"));
+              }
               if ((req.http.X-Forwarded-Proto && req.http.X-Forwarded-Proto != "https") || 
                   (req.http.Scheme && req.http.Scheme != "https")) {
                   return (synth(750));
@@ -112,6 +115,11 @@
           }
           
           sub vcl_synth {
+              if (resp.status == 301) {
+                  set resp.http.location = resp.reason;
+                  set resp.reason = "Moved";
+                  return (deliver);
+              }
               if (resp.status == 750) {
                   set resp.status = 301;
                   set resp.http.location = "https://" + req.http.Host + req.url;
