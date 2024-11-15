@@ -105,6 +105,9 @@
                 set req.backend_hint = nginx;
                 return(pipe);
               }
+              if (req.http.host != "{{ domains[0] }}") {
+                  return (synth(301, "https://{{ domains[0] }}"));
+              }
               if ((req.http.X-Forwarded-Proto && req.http.X-Forwarded-Proto != "https") || 
                   (req.http.Scheme && req.http.Scheme != "https")) {
                   return (synth(750));
@@ -115,6 +118,11 @@
           }
           
           sub vcl_synth {
+              if (resp.status == 301) {
+                  set resp.http.location = resp.reason;
+                  set resp.reason = "Moved";
+                  return (deliver);
+              }
               if (resp.status == 750) {
                   set resp.status = 301;
                   set resp.http.location = "https://" + req.http.Host + req.url;
@@ -175,6 +183,18 @@
           fi
           
           touch /var/run/monitor
+
+    - name: create varnish-update script
+      copy:
+        dest: /usr/bin/varnish-update
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          set -eu
+          TIME=$(date +%s)
+          VARNISHADM=$(docker ps --filter=name=infra_varnish -q)
+          docker exec $VARNISHADM varnishadm vcl.load varnish_$TIME /etc/varnish/default.vcl
+          docker exec $VARNISHADM varnishadm vcl.use varnish_$TIME
 
     - name: configure monitor
       copy:
@@ -274,7 +294,7 @@
                     mode: host
                 image: varnish:stable
                 volumes:
-                  - /etc/varnish/default.vcl:/etc/varnish/default.vcl
+                  - /etc/varnish:/etc/varnish
                 tmpfs:
                   - /var/lib/varnish:exec
                 environment:
