@@ -59,7 +59,9 @@
           
           import proxy;
           import directors;
-          
+          # See https://github.com/varnish/varnish-modules/blob/master/src/vmod_vsthrottle.vcc
+          import vsthrottle;
+
           probe health {
               .url = "/";
           }
@@ -93,6 +95,11 @@
           }
           
           sub vcl_recv {
+              if (vsthrottle.is_denied(client.identity, 15, 10s, 30s)) {
+                  # Client has exceeded 15 reqs per 10s.
+                  # When this happens, block altogether for the next 30s.
+                  return (synth(429, "Too Many Requests"));
+              }
               if (req.url ~ "^/metrics") {
                 if (!req.http.Authorization ~ "Basic {{ prometheus_password }}") {
                   return(synth(401, "Restricted"));
