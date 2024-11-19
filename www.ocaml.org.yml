@@ -247,7 +247,7 @@
           #!/bin/bash
           set -eu
           {% for domain in domains %}
-          systemd-cat docker run --rm -it --name certbot -v infra_letsencrypt:/etc/letsencrypt -v infra_wwwroot:/var/www/html -v /usr/bin/hitch-deploy:/usr/bin/hitch-deploy:ro certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d {{ domain }} --non-interactive --deploy-hook=/usr/bin/hitch-deploy
+          systemd-cat docker run --rm --name certbot -v infra_letsencrypt:/etc/letsencrypt -v infra_wwwroot:/var/www/html -v /usr/bin/hitch-deploy:/usr/bin/hitch-deploy:ro certbot/certbot certonly --webroot -w /var/www/html -m mark@tarides.com --agree-tos --no-eff-email -d {{ domain }} --non-interactive --deploy-hook=/usr/bin/hitch-deploy
           {% endfor %}
       register: cron
 
