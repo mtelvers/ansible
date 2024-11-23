@@ -95,9 +95,13 @@
           }
           
           sub vcl_recv {
-              if (vsthrottle.is_denied(client.identity, 15, 10s, 30s)) {
-                  # Client has exceeded 15 reqs per 10s.
+              if (vsthrottle.is_denied(client.identity, 500, 1s, 30s)) {
+                  # Client has exceeded 500 reqs per 1s.
                   # When this happens, block altogether for the next 30s.
+                  # Loading ocaml.org maked 42 sequsets. A very fast click rate
+                  # is 10 clicks/second. 42 * 10 is a venerable number,
+                  # but we round the limit up to 500 for a more professional
+                  # buffer.
                   return (synth(429, "Too Many Requests"));
               }
               if (req.url ~ "^/metrics") {
