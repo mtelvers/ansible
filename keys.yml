@@ -11,4 +11,5 @@
           - https://github.com/shonfeder.keys
         remove:
           - ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAkS75+eHN9Fk1BumLcuFEI/r6CAR/i7H+lqZ20wf8DBv0grUvN+2vA/yw4We5RvptoB7EBxDElNPMp85xiKH4prRRhTrTa2TjhNWPwu6sY4f7lUYzIqsBhCQBRGjmtpd7/Eab5NCrXWjtJmUhP9JTFVfMEqubemIR5Xfx9xDKFLCLClfgEZnhnMTjKe902xq0M0eKg0ZXnEsMFs1siMzj2dyifNfDMSDMhyLD6i0zoPs2nE7breQIVFNnAjuoynhnR2aWH7KHi3C4BehDxcgRw0qe2LsJc2ncFl7NO/tHPk1iewkJv2jwuTO3EJBPDCTTPcWgefjT8tF+Kydp+LmI+w==
+          - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGXrZr9NuMonCWsNhyb+4KD6sTBLyVKLkjpCo5QtqOQS thibaut.mattio@gmail.com
 
