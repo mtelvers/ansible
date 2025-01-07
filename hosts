@@ -40,10 +40,10 @@ ocaml-2.osuosl.ci.dev builder_pool=linux-arm64 capacity=2 obuilder_store=btrfs:/
 s390x-worker-01.marist.ci.dev builder_pool=linux-s390x capacity=4 obuilder_store=btrfs:/var/cache/obuilder store_device=/dev/dasdb1
 s390x-worker-02.marist.ci.dev builder_pool=linux-s390x capacity=2 obuilder_store=btrfs:/var/cache/obuilder store_device=/dev/dasdb1
 # Dell PowerEdge R630: 36C 512G
-phoebe.caelum.ci.dev builder_pool=linux-x86_64 capacity=42 obuilder_store=overlayfs:/var/cache/obuilder country=gb paused=true
-laodoke.caelum.ci.dev builder_pool=linux-x86_64 capacity=24 obuilder_store=overlayfs:/var/cache/obuilder store_device=/dev/nvme0n1 country=gb paused=true
-toxis.caelum.ci.dev builder_pool=linux-x86_64 capacity=24 obuilder_store=overlayfs:/var/cache/obuilder store_device=/dev/nvme0n1 country=gb paused=true
-clete.caelum.ci.dev builder_pool=linux-x86_64 capacity=32 obuilder_store=overlayfs:/var/cache/obuilder store_device=/dev/nvme0n1 country=gb paused=true
+phoebe.caelum.ci.dev builder_pool=linux-x86_64 capacity=42 obuilder_store=overlayfs:/var/cache/obuilder country=gb
+laodoke.caelum.ci.dev builder_pool=linux-x86_64 capacity=24 obuilder_store=overlayfs:/var/cache/obuilder store_device=/dev/nvme0n1 country=gb
+toxis.caelum.ci.dev builder_pool=linux-x86_64 capacity=24 obuilder_store=overlayfs:/var/cache/obuilder store_device=/dev/nvme0n1 country=gb
+clete.caelum.ci.dev builder_pool=linux-x86_64 capacity=32 obuilder_store=overlayfs:/var/cache/obuilder store_device=/dev/nvme0n1 country=gb
 # Dell PowerEdge R6525: 128C 1024G
 asteria.caelum.ci.dev builder_pool=linux-x86_64 capacity=64 obuilder_store=overlayfs:/var/cache/obuilder docker_device=/dev/nvme0n1 obuilder_device=/dev/nvme1n1 country=gb
 doris.caelum.ci.dev builder_pool=linux-x86_64 capacity=64 obuilder_store=overlayfs:/var/cache/obuilder docker_device=/dev/nvme0n1 obuilder_device=/dev/nvme1n1 country=gb
@@ -59,17 +59,6 @@ x86-bm-c6.sw.ocaml.org builder_pool=linux-x86_64 capacity=11 obuilder_store=over
 x86-bm-c7.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
 x86-bm-c8.sw.ocaml.org builder_pool=linux-x86_64 capacity=9 obuilder_store=overlayfs:/var/cache/obuilder country=fr
 x86-bm-c9.sw.ocaml.org builder_pool=linux-x86_64 capacity=8 obuilder_store=overlayfs:/var/cache/obuilder country=fr
-x86-bm-c10.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
-x86-bm-c11.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
-x86-bm-c12.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
-x86-bm-c13.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
-x86-bm-c14.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
-x86-bm-c15.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
-x86-bm-c16.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
-x86-bm-c17.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
-x86-bm-c18.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
-x86-bm-c19.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
-x86-bm-c20.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
 # Dell PowerEdge C6525: 32C 128G
 # x86-bm-d1.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
 # Raptor Talo II
