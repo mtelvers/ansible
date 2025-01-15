@@ -1,12 +1,30 @@
 ---
 
 - hosts: registry.ci.dev
+
   name: Configure controller host
   tasks:
+    - name: apt packages
+      apt:
+        name: "*"
+        state: latest
+        update_cache: yes
+
+    - name: apt packages
+      apt:
+        name:
+          - python3-requests
+          - python3-docker
+          - python3-jsondiff
+          - docker.io
+          - docker-buildx
+        state: present
+
     - name: Set up SwarmKit
       docker_swarm:
         listen_addr: "127.0.0.1:2377"
         advertise_addr: "127.0.0.1:2377"
+
     - name: Prune Docker builder cache
       copy:
         content: |
@@ -15,6 +33,7 @@
           systemd-cat -t "docker-buider-prune" docker builder prune -f
         dest: /etc/cron.hourly/docker-builder-prune
         mode: '0755'
+
     - name: Prune Docker
       copy:
         content: |
@@ -23,20 +42,24 @@
           systemd-cat -t "docker-system-prune" docker system prune -af
         dest: /etc/cron.daily/docker-builder-prune
         mode: '0755'
+
     - name: Purge old images from docker registry
       copy:
         content: |
           #!/bin/bash
           set -eux
-          PS=$(docker ps --filter=label=com.docker.swarm.service.name=registry_registry -q) && if [ -n "$PS" ] ; then docker exec $PS registry garbage-collect /etc/docker/registry/config.yml --delete-untagged ; fi
+          PS=$(docker ps --filter=label=com.docker.swarm.service.name=registry_registry -q) && if [ -n "$PS" ] ; then docker exec $PS registry garbage-collect /etc/distribution/config.yml --delete-untagged ; fi
         dest: /etc/cron.hourly/docker-registry-garbage-collect
         mode: '0755'
+
     - name: ensure volume folder exists
       shell: docker volume create registry_auth
+
     - name: Create password file
       shell: docker run --entrypoint htpasswd httpd:2 -Bbn ocurrent {{ lookup('vars', 'ocurrent') }} > /var/lib/docker/volumes/registry_auth/_data/htpasswd
       args:
         creates: /var/lib/docker/volumes/registry_auth/_data/htpasswd
+
     - name: set up registry infrastructure stack
       docker_stack:
         name: registry
@@ -45,11 +68,11 @@
           - version: "3.7"
             services:
               registry:
-                image: registry:3.0.0-alpha.1
+                image: registry:3.0.0-rc.2
                 ports:
                   - 443:5000
                 environment:
-                  - REGISTRY_HTTP_TLS_LETSENCRYPT_CACHEFILE=/etc/docker/registry/letsencrypt.json
+                  - REGISTRY_HTTP_TLS_LETSENCRYPT_CACHEFILE=/etc/letsencrypt
                   - REGISTRY_HTTP_TLS_LETSENCRYPT_EMAIL=mark@tarides.com
                   - REGISTRY_HTTP_TLS_LETSENCRYPT_DIRECTORYURL=https://acme-v02.api.letsencrypt.org/directory
                   - REGISTRY_HTTP_TLS_LETSENCRYPT_HOSTS=[registry.ci.dev]
@@ -60,6 +83,8 @@
                 volumes:
                   - 'data:/var/lib/registry'
                   - 'auth:/auth'
+                  - 'letsencrypt:/etc/letsencrypt'
             volumes:
               data:
               auth:
+              letsencrypt:
