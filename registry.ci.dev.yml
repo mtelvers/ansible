@@ -40,7 +40,7 @@
           #!/bin/bash
           set -eux
           systemd-cat -t "docker-system-prune" docker system prune -af
-        dest: /etc/cron.daily/docker-builder-prune
+        dest: /etc/cron.daily/docker-system-prune
         mode: '0755'
 
     - name: Purge old images from docker registry
@@ -49,7 +49,7 @@
           #!/bin/bash
           set -eux
           PS=$(docker ps --filter=label=com.docker.swarm.service.name=registry_registry -q) && if [ -n "$PS" ] ; then docker exec $PS registry garbage-collect /etc/distribution/config.yml --delete-untagged ; fi
-        dest: /etc/cron.hourly/docker-registry-garbage-collect
+        dest: /etc/cron.daily/docker-registry-garbage-collect
         mode: '0755'
 
     - name: ensure volume folder exists
