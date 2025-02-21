@@ -29,3 +29,10 @@ windows.check.ci.dev {
 	}
 	reverse_proxy opam-health-check-windows:8080
 }
+
+dune.check.ci.dev {
+	basic_auth /metrics {
+		prometheus {{ prometheus_password }}
+	}
+	reverse_proxy opam-health-check-dune:8080
+}
