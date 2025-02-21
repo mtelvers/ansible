@@ -88,6 +88,16 @@
                   - 'config:/root/.config/opam-health-check'
                 secrets:
                   - opam-health-check-cap
+              opam-health-check-dune:
+                image: ocurrent/opam-health-check:live
+                deploy:
+                  endpoint_mode: dnsrr
+                command: --connect /run/secrets/opam-health-check-cap /data/dune
+                volumes:
+                  - 'data:/data'
+                  - 'config:/root/.config/opam-health-check'
+                secrets:
+                  - opam-health-check-cap
             volumes:
               data:
               config:
