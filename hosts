@@ -76,6 +76,8 @@ riscv-bm-a1.sw.ocaml.org builder_pool=linux-riscv64 capacity=1 obuilder_store=bt
 riscv-bm-a2.sw.ocaml.org builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 riscv-bm-a3.sw.ocaml.org builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 riscv-bm-a4.sw.ocaml.org builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
+148.100.79.40 builder_pool=linux-s390x capacity=1 obuilder_store=btrfs:/var/cache/obuilder
+45.56.119.219 builder_pool=linux-s390x capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 
 [solvers]
 arm64-jade-2.equinix.ci.dev solver_pool=solver capacity=2 workers=56 instances=2

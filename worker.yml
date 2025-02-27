@@ -3,7 +3,7 @@
 - hosts: ubuntubuilders
   name: Install OCluster Worker
   roles:
-    - role: hyperthreading
+    #    - role: hyperthreading
     - role: docker
     - role: clarke
       when: country is defined
