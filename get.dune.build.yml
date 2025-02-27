@@ -26,6 +26,17 @@
         dest: /etc/cron.daily/docker-prune
         mode: u=rwx,g=rx,o=rx
 
+    - name: install plausible-log script
+      copy:
+        src: cron-scripts/plausible-log
+        dest: /usr/bin/plausible-log
+        mode: u=rwx,g=rx,o=rx
+
+    - name: create a cron tab entry
+      cron:
+        name: plausible-log
+        job: /usr/bin/plausible-log
+
     - name: set up deployer stack
       docker_stack:
         name: infra

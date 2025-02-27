@@ -38,6 +38,7 @@
       - docker.io
       - docker-buildx
       - docker-compose-v2
+      - python3-docker
       - python3-yaml
       - python3-jsondiff
       # Workaround for https://github.com/docker/docker-credential-helpers/issues/105:

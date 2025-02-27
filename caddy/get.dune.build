@@ -9,6 +9,7 @@ dune.ci.dev {
 get.dune.build {
         root * /dune
         file_server
+	log
 }
 
 preview.dune.build {
