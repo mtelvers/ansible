@@ -55,7 +55,7 @@
             services:
               scheduler:
                 image: ocurrent/ocluster-scheduler:live
-                command: --secrets-dir /capnp-secrets --capnp-secret-key-file /capnp-secrets/key.pem --capnp-listen-address tcp:0.0.0.0:9000 --capnp-public-address=tcp:scheduler.ci.dev:8103 --pools=linux-x86_64,linux-arm64,linux-ppc64,linux-riscv64,linux-s390x,freebsd-x86_64,macos-x86_64,macos-arm64,windows-1809-x86_64,windows-x86_64,windows-amd64,openbsd-amd64,solver,solver-test,test --listen-prometheus=9090 --state-dir=/var/lib/ocluster-scheduler -v
+                command: --secrets-dir /capnp-secrets --capnp-secret-key-file /capnp-secrets/key.pem --capnp-listen-address tcp:0.0.0.0:9000 --capnp-public-address=tcp:scheduler.ci.dev:8103 --pools=linux-x86_64,linux-arm64,linux-ppc64,linux-riscv64,linux-s390x,freebsd-x86_64,macos-x86_64,macos-arm64,windows-1809-x86_64,windows-x86_64,windows-amd64,openbsd-amd64,solver,solver-test,test,docs-pipeline --listen-prometheus=9090 --state-dir=/var/lib/ocluster-scheduler -v
                 init: true
                 ports:
                   - '8103:9000'
