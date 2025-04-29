@@ -46,3 +46,17 @@ prometheus.ci.dev {
         }
         reverse_proxy prometheus:9090
 }
+
+opam-repo.ci.ocaml.org {
+	handle /metrics {
+		basic_auth bcrypt {
+			prometheus {{ prometheus_password }}
+		}
+		reverse_proxy opam-repo-ci:8080
+	}
+	reverse_proxy opam-repo-ci:8080
+}
+
+opam.ci.ocaml.org {
+	reverse_proxy opam-repo-ci-web:8090
+}

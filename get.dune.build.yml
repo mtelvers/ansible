@@ -1,6 +1,12 @@
 ---
 
 - hosts: get.dune.build
+  name: Set up Docker
+  roles:
+    - docker
+    - deployer-key
+
+- hosts: get.dune.build
   name: Dune Binary Distribution
   tasks:
     - name: Set up SwarmKit

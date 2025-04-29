@@ -1,0 +1,15 @@
+#!/bin/bash
+set -eux
+
+d=$(date +"%s")
+lm=$((((d / 60) - 1) * 60))
+nm=$(((d / 60) * 60))
+
+docker logs $(docker ps --filter=label=com.docker.swarm.service.name=infra_caddy -q) 2>&1 |
+jq -c 'select(.ts >= '$lm') | select(.ts < '$nm') | select(.request.host == "get.dune.build") | select(.status == 200) | select(.request.uri | endswith(".tar.gz")) | { name: "File Download", url: ("https://" + .request.host + .request.uri), props: { url: ("https://" + .request.host + .request.uri) }, domain: "preview.dune.build" }, {header: [("User-Agent: " + .request.headers."User-Agent"[0]), ("X-Forwarded-For: " + .request.remote_ip)] }' |
+while read -r data ; do
+  read -r headers
+  header0=$(echo $headers | jq -r '.header[0]')
+  header1=$(echo $headers | jq -r '.header[1]')
+  systemd-cat -t "plausible-log" curl -i -X POST https://plausible.ci.dev/api/event -H "Content-Type: application/json" -H "$header0" -H "$header1" --data "$data"
+done
