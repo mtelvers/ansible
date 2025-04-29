@@ -3,7 +3,7 @@
 - hosts: ocaml.ci.dev
   name: Set up Docker
   roles:
-    #    - docker
+    - docker
     - deployer-key
 
 - hosts: ocaml.ci.dev
@@ -29,13 +29,17 @@
         - ocaml-ci-gitlab-token
         - ocaml-ci-gitlab-webhook-secret
         - ocaml-ci-solver-cap
+        - opam-repo-ci-submission-cap
+        - opam-repo-ci-webhook-secret
+        - opam-repo-ci-github-key
+        - opam-repo-ci-oauth
     - name: create caddy directory
       file:
         path: /etc/caddy
         state: directory
     - name: configure caddy
       template:
-        src: caddy/ocaml.ci.dev
+        src: caddy/chives.caelum.ci.dev
         dest: /etc/caddy/Caddyfile
       notify:
         - restart caddy
@@ -47,6 +51,7 @@
       vars:
         volumes:
           - ocaml-ci_data
+          - opam-repo-ci_data
     - name: install docker-prune script
       copy:
         src: cron-scripts/docker-prune
@@ -91,6 +96,7 @@
                     protocol: tcp
                     mode: host
                 networks:
+                  opam-repo-ci_default: {}
                   ocaml-ci_default: {}
                   default: {}
                 volumes:
@@ -104,6 +110,7 @@
                   - "prometheus-data:/prometheus"
                   - "/etc/prometheus:/etc/prometheus:ro"
                 networks:
+                  opam-repo-ci_default: {}
                   ocaml-ci_default: {}
                   default: {}
               grafana:
@@ -120,6 +127,8 @@
               caddy_config:
             networks:
               ocaml-ci_default:
+                external: true
+              opam-repo-ci_default:
                 external: true
   handlers:
     - name: restart prometheus

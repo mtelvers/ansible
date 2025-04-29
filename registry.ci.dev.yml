@@ -1,7 +1,11 @@
 ---
 
 - hosts: registry.ci.dev
+  name: Set up Docker
+  roles:
+    - deployer-key
 
+- hosts: registry.ci.dev
   name: Configure controller host
   tasks:
     - name: apt packages
@@ -25,22 +29,17 @@
         listen_addr: "127.0.0.1:2377"
         advertise_addr: "127.0.0.1:2377"
 
-    - name: Prune Docker builder cache
+    - name: Prune Docker when system is idle
       copy:
         content: |
           #!/bin/bash
           set -eux
-          systemd-cat -t "docker-buider-prune" docker builder prune -f
-        dest: /etc/cron.hourly/docker-builder-prune
-        mode: '0755'
-
-    - name: Prune Docker
-      copy:
-        content: |
-          #!/bin/bash
-          set -eux
+          systemd-cat -t "docker-system-prune" uptime
+          if awk '{ exit !($1 > 0.1) }' /proc/loadavg ; then
+            exit 0
+          fi
           systemd-cat -t "docker-system-prune" docker system prune -af
-        dest: /etc/cron.daily/docker-system-prune
+        dest: /etc/cron.hourly/docker-system-prune
         mode: '0755'
 
     - name: Purge old images from docker registry
@@ -68,7 +67,7 @@
           - version: "3.7"
             services:
               registry:
-                image: registry:3.0.0-rc.2
+                image: registry:3
                 ports:
                   - 443:5000
                 environment:

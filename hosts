@@ -1,7 +1,7 @@
 [servers]
 deploy.ci.ocaml.org
 staging.docs.ci.ocamllabs.io
-registry.ci.dev
+registry.ci.dev ansible_host=128.232.124.185
 watch.ocaml.org
 v3b.ocaml.org
 v3c.ocaml.org
@@ -14,12 +14,13 @@ c2-1.equinix.ci.dev
 c2-2.equinix.ci.dev
 ocaml-multicore.ci.dev
 check.ci.ocaml.org
-ocaml.ci.dev
+ocaml.ci.dev ansible_host=128.232.124.253
 opam.ci.ocaml.org
 opam-4.ocaml.org
 opam-5.ocaml.org
-get.dune.build
+get.dune.build ansible_host=128.232.124.216
 ci.mirageos.org
+sage.caelum.ci.dev
 
 [all:vars]
 state_dir=/var/cache/obuilder/ocluster
@@ -76,6 +77,10 @@ riscv-bm-a1.sw.ocaml.org builder_pool=linux-riscv64 capacity=1 obuilder_store=bt
 riscv-bm-a2.sw.ocaml.org builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 riscv-bm-a3.sw.ocaml.org builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 riscv-bm-a4.sw.ocaml.org builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
+riscv-bm-01.sw.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
+riscv-bm-02.sw.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
+riscv-bm-03.sw.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
+riscv-bm-04.sw.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 148.100.79.40 builder_pool=linux-s390x capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 45.56.119.219 builder_pool=linux-s390x capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 

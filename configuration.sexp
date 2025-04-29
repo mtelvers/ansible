@@ -117,24 +117,16 @@
    )
   )
   (
-   (name ocaml.ci.dev.yml)
-   (vars /run/secrets/ocaml.ci.dev.yml)
+   (name chives.caelum.ci.dev.yml)
+   (vars /run/secrets/chives.caelum.ci.dev.yml)
    (deps (
-     caddy/ocaml.ci.dev
+     caddy/chives.caelum.ci.dev
      cron-scripts/clear-log
      cron-scripts/docker-prune
      prometheus/prometheus-ci.yml
      roles/docker/tasks/main.yml
      roles/deployer-key/tasks/main.yml
      roles/deployer-key/files/id_rsa.pub))
-  )
-  (
-   (name opam.ci.ocaml.org.yml)
-   (vars /run/secrets/opam.ci.ocaml.org.yml)
-   (deps (
-     caddy/opam.ci.ocaml.org
-     cron-scripts/clear-log
-     cron-scripts/docker-prune))
   )
   (
    (name opam.ocaml.org.yml)
