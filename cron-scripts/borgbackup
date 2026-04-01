@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# Simple Borg Backup Script for /etc/cron.daily
+# No encryption setup (--encryption=none)
+
+# Configuration - EDIT THESE VALUES
+REPOSITORY="thyme:repo"
+
+# What to backup
+BACKUP_PATHS="
+/var/lib/docker/volumes/peertube-data
+/var/lib/docker/volumes/peertube-conf
+/var/lib/docker/volumes/certbot-conf
+/var/lib/docker/volumes/nginx-conf
+/var/lib/docker/volumes/opendkim
+/var/lib/docker/volumes/postgres
+/var/lib/docker/volumes/redis
+"
+
+# What to exclude
+EXCLUDE_ARGS="
+--exclude '/var/lib/docker/volumes/peertube-data/_data/logs/*'
+"
+
+# Simple logging function
+log() {
+    logger -t "borg-backup" "$1"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
+}
+
+log "========================================"
+log "Starting Borg backup"
+
+# Check if borg is installed
+if ! command -v borg &> /dev/null; then
+    log "ERROR: borg command not found"
+    exit 1
+fi
+
+# Test repository access
+if ! borg info "$REPOSITORY" &> /dev/null; then
+    log "ERROR: Cannot access repository $REPOSITORY"
+    log "Make sure repository exists and SSH key is set up"
+    exit 1
+fi
+
+# Create backup
+log "Creating backup archive..."
+if borg create \
+    "$REPOSITORY::backup-{now}" \
+    $BACKUP_PATHS \
+    $EXCLUDE_ARGS \
+    --compression lz4 \
+    --stats 2>&1 | logger -t "borg-backup"; then
+    log "Backup created successfully"
+else
+    log "ERROR: Backup creation failed"
+    exit 1
+fi
+
+# Prune old backups
+log "Pruning old backups..."
+if borg prune "$REPOSITORY" \
+    --keep-daily=7 \
+    --keep-weekly=4 \
+    --keep-monthly=6 \
+    --stats 2>&1 | logger -t "borg-backup"; then
+    log "Pruning completed successfully"
+else
+    log "WARNING: Pruning failed, but backup was successful"
+fi
+
+# Monthly repository check (on the 1st of each month)
+if [ "$(date +%d)" = "01" ]; then
+    log "Running monthly repository check..."
+    if borg check "$REPOSITORY" 2>&1 | logger -t "borg-backup"; then
+        log "Repository check passed"
+    else
+        log "WARNING: Repository check failed"
+    fi
+fi
+
+log "Backup completed successfully"

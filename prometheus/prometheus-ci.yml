@@ -185,28 +185,9 @@ scrape_configs:
     static_configs:
     - targets: ['hopi.caelum.ci.dev']
 
-  - job_name: federate
-    scheme: https
-    basic_auth:
-      username: prometheus
-      password: {{ prometheus_password_plain }}
-    honor_labels: true
-    metrics_path: '/federate'
-    params:
-      match[]:
-        - '{__name__=~"ocluster_.+"}'
-        - '{__name__=~"capnp_.+"}'
-        - '{__name__=~"ocaml_.+"}'
-        - '{__name__=~"node_load.+"}'
-        - '{__name__=~"node_filesystem_.+"}'
-        - '{__name__=~"node_memory_.+"}'
-        - '{__name__=~"node_network_.+"}'
-        - '{__name__=~"node_disk_.+"}'
-        - '{__name__=~"windows_.+"}'
-        - '{__name__=~"Clarke_.+"}'
+  - job_name: 'scheduler'
     static_configs:
-      - targets:
-        - scheduler.ci.dev
+    - targets: ['scheduler:9090']
 
   - job_name: "autumn-host"
     scheme: https
@@ -279,3 +260,84 @@ scrape_configs:
     metrics_path: '_ocluster/pool/pascal/worker/pascal/host-metrics'
     static_configs:
       - targets: ["bench.ci.dev"]
+
+  # Builder agent metrics (via scheduler)
+
+{% for builder in groups['ubuntubuilders'] %}
+  - job_name: '{{ builder | regex_replace("\..*", "")}}'
+    metrics_path: /pool/{{ hostvars[builder]['builder_pool']}}/worker/{{ builder }}/metrics
+    static_configs:
+    - targets: ['scheduler:9090']
+
+{% endfor %}
+
+  # Solver agent metrics (via scheduler)
+
+{% for solver in groups['solvers'] %}
+{% for n in range(1, 1 + hostvars[solver]['instances']) %}
+  - job_name: '{{ solver | regex_replace("\..*", "")}}-{{ n }}-solver'
+    metrics_path: /pool/{{ hostvars[solver]['solver_pool'] }}/worker/{{ solver }}-{{ n }}/metrics
+    static_configs:
+    - targets: ['scheduler:9090']
+
+{% endfor %}
+{% endfor %}
+
+  # Host metrics (via scheduler)
+
+{% for builder in groups['ubuntubuilders'] %}
+  - job_name: '{{ builder | regex_replace("\..*", "")}}-host'
+    metrics_path: /pool/{{ hostvars[builder]['builder_pool']}}/worker/{{ builder }}/host-metrics
+    static_configs:
+    - targets: ['scheduler:9090']
+
+{% endfor %}
+
+  # Clarke Emissions Monitoring (via scheduler)
+
+{% for builder in groups['ubuntubuilders'] %}
+{% if hostvars[builder]['country'] is defined %}
+  - job_name: '{{ builder | regex_replace("\..*", "")}}-clarke'
+    metrics_path: /pool/{{ hostvars[builder]['builder_pool']}}/worker/{{ builder }}/clarke
+    static_configs:
+    - targets: ['scheduler:9090']
+
+{% endif %}
+{% endfor %}
+
+  # Windows (via scheduler)
+
+{% for builder in range(1, 4) %}
+  - job_name: ltsc2025-{{ builder }}
+    metrics_path: /pool/windows-x86_64/worker/ltsc2025-{{ builder }}/metrics
+    static_configs:
+    - targets: ['scheduler:9090']
+
+{% endfor %}
+
+  - job_name: ltsc2019-1
+    metrics_path: /pool/windows-1809-x86_64/worker/ltsc2019-1/metrics
+    static_configs:
+    - targets: ['scheduler:9090']
+
+  # Mac (via scheduler)
+
+{% for builder in '01', '02', '03', '04' %}
+  - job_name: i7-worker-{{ builder }}
+    metrics_path: /pool/macos-x86_64/worker/i7-worker-{{ builder }}/metrics
+    static_configs:
+    - targets: ['scheduler:9090']
+
+  - job_name: m1-worker-{{ builder }}
+    metrics_path: /pool/macos-arm64/worker/m1-worker-{{ builder }}/metrics
+    static_configs:
+    - targets: ['scheduler:9090']
+
+{% endfor %}
+
+  # FreeBSD (via scheduler)
+
+  - job_name: rosemary
+    metrics_path: /pool/freebsd-x86_64/worker/rosemary/metrics
+    static_configs:
+    - targets: ['scheduler:9090']

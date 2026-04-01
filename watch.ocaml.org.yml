@@ -1,28 +1,38 @@
 ---
 
 - hosts: watch.ocaml.org
-  name: Install Tarsnap
+  name: Install Borg Backup
   tasks:
-  - name: Download Tarsnap's PGP public key
-    apt_key:
-      url: https://pkg.tarsnap.com/tarsnap-deb-packaging-key.asc
-      keyring: /usr/share/keyrings/tarsnap-archive-keyring.gpg
-      state: present
-  - name: Add Tarsnap Repository
-    apt_repository:
-      repo:  "deb [signed-by=/usr/share/keyrings/tarsnap-archive-keyring.gpg] http://pkg.tarsnap.com/deb/{{ ansible_distribution_release|lower }} ./"
-      filename: tarsnap
-      state: present
-      update_cache: yes
-  - name: Install Tarsnap
+  - name: Install borgbackup
     package:
-      name: tarsnap
+      name: borgbackup
       state: present
-  - name: Copy tarsnap key
+  - name: Create .ssh directory
+    file:
+      path: /root/.ssh
+      state: directory
+      mode: 0700
+  - name: Copy borg backup SSH key
     copy:
-      content: "{{ tarsnap_key }}"
-      dest: /root/tarsnap.key
+      content: "{{ borg_ssh_key }}"
+      dest: /root/.ssh/borg_backup_key
       mode: 0600
+  - name: Configure SSH for backup server
+    copy:
+      content: |
+        Host thyme
+            HostName thyme.caelum.ci.dev
+            User borg
+            IdentityFile ~/.ssh/borg_backup_key
+            ServerAliveInterval 60
+            ServerAliveCountMax 3
+      dest: /root/.ssh/config
+      mode: 0600
+  - name: Install borg backup cron job
+    copy:
+      src: cron-scripts/borgbackup
+      dest: /etc/cron.daily/borgbackup
+      mode: u=rwx,g=rx,o=rx
 
 - hosts: watch.ocaml.org
   name: Install Peer Tube

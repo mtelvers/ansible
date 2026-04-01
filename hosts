@@ -2,7 +2,7 @@
 deploy.ci.ocaml.org
 staging.docs.ci.ocamllabs.io
 registry.ci.dev ansible_host=128.232.124.185
-watch.ocaml.org
+watch.ocaml.org ansible_host=svr-avsm2-watch.cl.cam.ac.uk ansible_user=root
 v3b.ocaml.org
 v3c.ocaml.org
 docs.ci.ocaml.org ansible_host=c2-1.equinix.ci.dev
@@ -20,15 +20,13 @@ opam-4.ocaml.org
 opam-5.ocaml.org
 get.dune.build ansible_host=128.232.124.216
 ci.mirageos.org
-sage.caelum.ci.dev
+sage.caelum.ci.dev builder_pool=docs-pipeline capacity=8 obuilder_store=overlayfs:/var/cache/obuilder
 
 [all:vars]
 state_dir=/var/cache/obuilder/ocluster
 prune_threshold=30
 
 [ubuntubuilders]
-# Avantek Mt Jade
-arm64-jade-2.equinix.ci.dev builder_pool=linux-arm64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder obuilder_device=/dev/nvme1n1 paused=true
 # Avantek Mt Snow
 ainia.caelum.ci.dev builder_pool=linux-arm64 capacity=20 obuilder_store=btrfs:/var/cache/obuilder docker_device=/dev/nvme1n1 obuilder_device=/dev/nvme2n1
 kydoime.caelum.ci.dev builder_pool=linux-arm64 capacity=20 obuilder_store=btrfs:/var/cache/obuilder docker_device=/dev/nvme1n1 obuilder_device=/dev/nvme2n1
@@ -44,12 +42,15 @@ s390x-worker-02.marist.ci.dev builder_pool=linux-s390x capacity=2 obuilder_store
 phoebe.caelum.ci.dev builder_pool=linux-x86_64 capacity=42 obuilder_store=overlayfs:/var/cache/obuilder country=gb
 laodoke.caelum.ci.dev builder_pool=linux-x86_64 capacity=24 obuilder_store=overlayfs:/var/cache/obuilder store_device=/dev/nvme0n1 country=gb
 toxis.caelum.ci.dev builder_pool=linux-x86_64 capacity=24 obuilder_store=overlayfs:/var/cache/obuilder store_device=/dev/nvme0n1 country=gb
+bremusa.ocamllabs.io builder_pool=linux-x86_64 capacity=24 obuilder_store=overlayfs:/var/cache/obuilder store_device=/dev/nvme0n1 country=gb
+eumache.caelum.ci.dev builder_pool=linux-x86_64 capacity=24 obuilder_store=overlayfs:/var/cache/obuilder store_device=/dev/nvme0n1 country=gb
 clete.caelum.ci.dev builder_pool=linux-x86_64 capacity=32 obuilder_store=overlayfs:/var/cache/obuilder store_device=/dev/nvme0n1 country=gb
 # Dell PowerEdge R6525: 128C 1024G
 asteria.caelum.ci.dev builder_pool=linux-x86_64 capacity=64 obuilder_store=overlayfs:/var/cache/obuilder docker_device=/dev/nvme0n1 obuilder_device=/dev/nvme1n1 country=gb
 doris.caelum.ci.dev builder_pool=linux-x86_64 capacity=64 obuilder_store=overlayfs:/var/cache/obuilder docker_device=/dev/nvme0n1 obuilder_device=/dev/nvme1n1 country=gb
 iphito.caelum.ci.dev builder_pool=linux-x86_64 capacity=64 obuilder_store=overlayfs:/var/cache/obuilder docker_device=/dev/nvme0n1 obuilder_device=/dev/nvme1n1 country=gb paused=true
-marpe.caelum.ci.dev builder_pool=linux-x86_64 capacity=64 obuilder_store=overlayfs:/var/cache/obuilder docker_device=/dev/nvme0n1 obuilder_device=/dev/nvme1n1 country=gb paused=true
+marpe.cl.cam.ac.uk builder_pool=linux-x86_64 capacity=64 obuilder_store=overlayfs:/var/cache/obuilder docker_device=/dev/nvme0n1 obuilder_device=/dev/nvme1n1 country=gb paused=true ansible_user=root
+odawa.caelum.ci.dev builder_pool=linux-x86_64 capacity=64 obuilder_store=overlayfs:/var/cache/obuilder country=gb
 # Dell PowerEdge R720: 16C 256G
 x86-bm-c1.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
 x86-bm-c2.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
@@ -60,11 +61,14 @@ x86-bm-c6.sw.ocaml.org builder_pool=linux-x86_64 capacity=11 obuilder_store=over
 x86-bm-c7.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
 x86-bm-c8.sw.ocaml.org builder_pool=linux-x86_64 capacity=9 obuilder_store=overlayfs:/var/cache/obuilder country=fr
 x86-bm-c9.sw.ocaml.org builder_pool=linux-x86_64 capacity=8 obuilder_store=overlayfs:/var/cache/obuilder country=fr
+# Supermicro 20C 192G
+oregano.caelum.ci.dev builder_pool=openbsd-amd64 capacity=10 obuilder_store=qemu:/var/cache/obuilder obuilder_extra="--qemu-cpu 4 --qemu-memory 10 --qemu-guest-os openbsd"
 # Dell PowerEdge C6525: 32C 128G
 # x86-bm-d1.sw.ocaml.org builder_pool=linux-x86_64 capacity=10 obuilder_store=overlayfs:/var/cache/obuilder country=fr
 # Raptor Talo II
 scyleia.caelum.ci.dev builder_pool=linux-ppc64 capacity=58 obuilder_store=btrfs:/var/cache/obuilder docker_device=/dev/nvme0n1 obuilder_device=/dev/nvme2n1
 orithia.caelum.ci.dev builder_pool=linux-ppc64 capacity=58 obuilder_store=btrfs:/var/cache/obuilder docker_device=/dev/nvme0n1 obuilder_device=/dev/nvme2n1
+talos ansible_host=23.155.224.95 builder_pool=linux-ppc64 capacity=8 obuilder_store=btrfs:/var/cache/obuilder
 # SiFive U74-MC
 leafcutter.caelum.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 carpenter.caelum.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs:/var/cache/obuilder
@@ -85,7 +89,6 @@ riscv-bm-04.sw.ci.dev builder_pool=linux-riscv64 capacity=1 obuilder_store=btrfs
 45.56.119.219 builder_pool=linux-s390x capacity=1 obuilder_store=btrfs:/var/cache/obuilder
 
 [solvers]
-arm64-jade-2.equinix.ci.dev solver_pool=solver capacity=2 workers=56 instances=2
 ainia.caelum.ci.dev solver_pool=solver capacity=2 workers=56 instances=1
 kydoime.caelum.ci.dev solver_pool=solver capacity=2 workers=56 instances=1
 molpadia.caelum.ci.dev solver_pool=solver capacity=2 workers=56 instances=1

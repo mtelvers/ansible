@@ -60,3 +60,68 @@ opam-repo.ci.ocaml.org {
 opam.ci.ocaml.org {
 	reverse_proxy opam-repo-ci-web:8090
 }
+
+ci.mirage.io {
+	redir https://ci.mirageos.org{uri} permanent
+}
+
+deploy.mirage.io {
+	redir https://deploy.mirageos.org{uri} permanent
+}
+
+ci.mirageos.org {
+	reverse_proxy mirage-ci:8080 {
+		transport http {
+			versions 1.1
+		}
+	}
+}
+
+sandmark.ocamllabs.io, sandmark.tarides.com {
+	reverse_proxy sandmark:8501
+}
+
+scheduler.ci.dev {
+	basic_auth bcrypt {
+		prometheus {{ prometheus_password }}
+	}
+	reverse_proxy prometheus:9090
+}
+
+status.ci3.ocamllabs.io {
+	redir https://status.ocaml.ci.dev{uri} permanent
+}
+
+images.ci.ocaml.org {
+	handle /metrics {
+		basic_auth bcrypt {
+			prometheus {{ prometheus_password }}
+		}
+		reverse_proxy base-images:8080
+	}
+	reverse_proxy base-images:8080 {
+		transport http {
+			versions 1.1
+		}
+	}
+}
+
+deploy.ci3.ocamllabs.io {
+	redir https://deploy.ci.dev{uri} permanent
+}
+
+deploy.ci.dev {
+	reverse_proxy tarides-deployer:8080 {
+		transport http {
+			versions 1.1
+		}
+	}
+}
+
+deploy.mirageos.org {
+	reverse_proxy mirage-deployer:8080 {
+		transport http {
+			versions 1.1
+		}
+	}
+}

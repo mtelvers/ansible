@@ -33,6 +33,26 @@
         - opam-repo-ci-webhook-secret
         - opam-repo-ci-github-key
         - opam-repo-ci-oauth
+        - mirage-ci-github-token
+        - mirage-ci-submission-cap
+        - mirage-ci-webhook-secret
+        - mirage-deployer-github-key
+        - mirage-deployer-github-oauth
+        - mirage-deployer-slack
+        - mirage-deployer-ssh-key
+        - mirage-deployer-submission-cap
+        - mirage-deployer-webhook-secret
+        - ocurrentbuilder-password
+        - ocurrent-hub
+        - base-builder-oauth
+        - base-builder-slack
+        - base-builder-submission-cap
+        - tarides-deployer-github-key
+        - tarides-deployer-github-oauth
+        - tarides-deployer-slack
+        - tarides-deployer-ssh-key
+        - tarides-deployer-submission-cap
+        - tarides-deployer-webhook-secret
     - name: create caddy directory
       file:
         path: /etc/caddy
@@ -52,6 +72,7 @@
         volumes:
           - ocaml-ci_data
           - opam-repo-ci_data
+          - mirage-ci_data
     - name: install docker-prune script
       copy:
         src: cron-scripts/docker-prune
@@ -119,12 +140,157 @@
                   - "grafana-storage:/var/lib/grafana"
                 environment:
                   - "GF_SERVER_ROOT_URL=http://status.ocaml.ci.dev"
+              mirage-ci:
+                image: ocurrent/mirage-ci:live
+                command: --ocluster-cap /run/secrets/mirage-ci-submission-cap --github-webhook-secret-file /run/secrets/mirage-ci-webhook-secret --github-token-file /run/secrets/mirage-ci-github-token --test-mirage-4 mirage,skeleton,dev,overlay
+                volumes:
+                  - 'mirage-ci_data:/var/lib/ocurrent'
+                secrets:
+                  - mirage-ci-github-token
+                  - mirage-ci-submission-cap
+                  - mirage-ci-webhook-secret
+                sysctls:
+                  - 'net.ipv4.tcp_keepalive_time=60'
+                environment:
+                  - "CI_PROFILE=production"
+              mirage-deployer:
+                image: ocurrent/deploy.mirageos.org:live
+                command: --github-app-id 54383 --github-private-key-file /run/secrets/mirage-deployer-github-key --github-account-allowlist mirage --slack /run/secrets/mirage-deployer-slack --confirm above-average --confirm-auto-release 120 --github-oauth /run/secrets/mirage-deployer-github-oauth --github-webhook-secret-file /run/secrets/mirage-deployer-webhook-secret --submission-service /run/secrets/mirage-deployer-submission-cap --staging-password-file /run/secrets/ocurrentbuilder-password -v --flavour mirage
+                volumes:
+                  - 'mirage-deployer-data:/var/lib/ocurrent'
+                  - 'mirage-deployer-ssh:/root/.ssh'
+                secrets:
+                  - mirage-deployer-github-key
+                  - mirage-deployer-github-oauth
+                  - mirage-deployer-slack
+                  - mirage-deployer-webhook-secret
+                  - mirage-deployer-submission-cap
+                  - ocurrent-hub
+                  - ocurrentbuilder-password
+                  - source: 'mirage-deployer-ssh-key'
+                    target: 'deployer-ssh-key'
+                    mode: 0400
+                sysctls:
+                  - 'net.ipv4.tcp_keepalive_time=60'
+              scheduler:
+                image: ocurrent/ocluster-scheduler:live
+                command: --secrets-dir /capnp-secrets --capnp-secret-key-file /capnp-secrets/key.pem --capnp-listen-address tcp:0.0.0.0:9000 --capnp-public-address=tcp:scheduler.ci.dev:8103 --pools=linux-x86_64,linux-arm64,linux-ppc64,linux-riscv64,linux-s390x,freebsd-x86_64,macos-x86_64,macos-arm64,windows-1809-x86_64,windows-x86_64,windows-amd64,openbsd-amd64,solver,solver-test,test,docs-pipeline --listen-prometheus=9090 --state-dir=/var/lib/ocluster-scheduler -v
+                init: true
+                ports:
+                  - '8103:9000'
+                volumes:
+                  - 'scheduler-data:/var/lib/ocluster-scheduler'
+                  - 'scheduler-capnp-secrets:/capnp-secrets'
+                sysctls:
+                  - 'net.ipv4.tcp_keepalive_time=60'
+              base-images:
+                image: ocurrent/base-images:live
+                command: --confirm above-average --confirm-auto-release 120 --verbose --slack /run/secrets/base-builder-slack --capnp-address=images.ci.ocaml.org:8101 --github-oauth /run/secrets/base-builder-oauth --submission-service /run/secrets/base-builder-submission-cap --staging-password-file /run/secrets/ocurrentbuilder-password
+                init: true
+                ports:
+                  - '8101:9000'
+                environment:
+                  DOCKER_BUILDKIT: 0
+                  DEPLOYMENT: 1
+                volumes:
+                  - 'base-images-data:/var/lib/ocurrent'
+                  - 'base-images-capnp-secrets:/capnp-secrets'
+                secrets:
+                  - base-builder-oauth
+                  - base-builder-slack
+                  - base-builder-submission-cap
+                  - ocurrentbuilder-password
+                  - ocurrent-hub
+                sysctls:
+                  - 'net.ipv4.tcp_keepalive_time=60'
+              sandmark:
+                image: ocurrent/sandmark-nightly:live
+                sysctls:
+                  - 'net.ipv4.tcp_keepalive_time=60'
+              tarides-deployer:
+                image: ocurrent/ci.ocamllabs.io-deployer:live-ci3
+                command: -v --github-app-id 85548 --github-private-key-file /run/secrets/deployer-github-key --github-account-allowlist ocurrent,mirage,ocaml-bench,ocaml,tarides --slack /run/secrets/deployer-slack --confirm above-average --confirm-auto-release 120 --github-oauth /run/secrets/deployer-github-oauth --github-webhook-secret-file /run/secrets/deployer-webhook-secret --submission-service /run/secrets/deployer-submission-cap --staging-password-file /run/secrets/ocurrentbuilder-password --flavour tarides
+                volumes:
+                  - 'tarides-deployer-data:/var/lib/ocurrent'
+                  - '/var/run/docker.sock:/var/run/docker.sock'
+                secrets:
+                  - source: tarides-deployer-github-key
+                    target: deployer-github-key
+                  - source: tarides-deployer-github-oauth
+                    target: deployer-github-oauth
+                  - source: tarides-deployer-slack
+                    target: deployer-slack
+                  - source: tarides-deployer-submission-cap
+                    target: deployer-submission-cap
+                  - source: tarides-deployer-webhook-secret
+                    target: deployer-webhook-secret
+                  - ocurrentbuilder-password
+                  - ocurrent-hub
+                  - source: tarides-deployer-ssh-key
+                    target: deployer-ssh-key
+                    mode: 0400
+                sysctls:
+                  - 'net.ipv4.tcp_keepalive_time=60'
             volumes:
               prometheus-data:
               grafana-storage:
               caddy_data:
                 external: true
               caddy_config:
+              mirage-ci_data:
+              mirage-deployer-data:
+              mirage-deployer-ssh:
+              scheduler-data:
+                external: true
+              scheduler-capnp-secrets:
+                external: true
+              base-images-data:
+                external: true
+              base-images-capnp-secrets:
+                external: true
+              tarides-deployer-data:
+                external: true
+            secrets:
+              mirage-ci-github-token:
+                external: true
+              mirage-ci-submission-cap:
+                external: true
+              mirage-ci-webhook-secret:
+                external: true
+              mirage-deployer-github-key:
+                external: true
+              mirage-deployer-github-oauth:
+                external: true
+              mirage-deployer-slack:
+                external: true
+              mirage-deployer-ssh-key:
+                external: true
+              mirage-deployer-submission-cap:
+                external: true
+              mirage-deployer-webhook-secret:
+                external: true
+              ocurrentbuilder-password:
+                external: true
+              ocurrent-hub:
+                external: true
+              base-builder-oauth:
+                external: true
+              base-builder-slack:
+                external: true
+              base-builder-submission-cap:
+                external: true
+              tarides-deployer-github-key:
+                external: true
+              tarides-deployer-github-oauth:
+                external: true
+              tarides-deployer-slack:
+                external: true
+              tarides-deployer-ssh-key:
+                external: true
+              tarides-deployer-submission-cap:
+                external: true
+              tarides-deployer-webhook-secret:
+                external: true
             networks:
               ocaml-ci_default:
                 external: true
