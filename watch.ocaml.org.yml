@@ -75,6 +75,10 @@
             services:
               webserver:
                 image: chocobozzz/peertube-webserver:latest
+                # Reload nginx every 6h so renewed certbot certificates are
+                # picked up without a container restart (see $${!} escaping
+                # to keep the literal through "docker stack deploy").
+                command: /bin/sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
                 env_file:
                   - /root/.env
                 deploy:
