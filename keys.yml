@@ -6,10 +6,24 @@
     - role: ssh-key
       vars:
         add:
-          - https://github.com/punchagan.keys
           - https://github.com/mtelvers.keys
-          - https://github.com/shonfeder.keys
         remove:
-          - ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAkS75+eHN9Fk1BumLcuFEI/r6CAR/i7H+lqZ20wf8DBv0grUvN+2vA/yw4We5RvptoB7EBxDElNPMp85xiKH4prRRhTrTa2TjhNWPwu6sY4f7lUYzIqsBhCQBRGjmtpd7/Eab5NCrXWjtJmUhP9JTFVfMEqubemIR5Xfx9xDKFLCLClfgEZnhnMTjKe902xq0M0eKg0ZXnEsMFs1siMzj2dyifNfDMSDMhyLD6i0zoPs2nE7breQIVFNnAjuoynhnR2aWH7KHi3C4BehDxcgRw0qe2LsJc2ncFl7NO/tHPk1iewkJv2jwuTO3EJBPDCTTPcWgefjT8tF+Kydp+LmI+w==
+          # Keys from https://github.com/shonfeder.keys (uncomment to remove):
+          - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDITC9dQFLKcv5FnRslpLABWZerxWNic5GeafFFuzNQWbzSVHKr/4Fseb5eabbZRtD2aYS8gY7hwMs6RE740IbO0lUJd8FCFwb6GpOWHAOs5FMJYmX0ifU5Aep7m8SezgqbFsWvS3Ws9Cv2DIyPmA9QOg6thYDZz5lnFoUQ27AhBDz0H/wtAOo7klpDz4ZB+xzT0P9c0F/btCWkG892CNboHcHV7Sx7qMRHA4Anyi/9ojO3+RYnDtn3GlC9kD5WbCr6G726LSRZ2KMKgyxf7gHsNjW/ze0wABEGx2kDi3FTgPvKW73kcD+C+wTUMnjxjDkNeJ6bGN0n0E2w32odVXxwSvcQdjzKjrdu6vl1e9ckjpkcE9qIlBCdDSnKFxFuiKVmUA2akij7FDbQtj491tfa7C5WYK9nK2HbXekvhgkDSx6EhHDkp3wvmAU/LFvDYzJYRoV1izsnJMAYoGylNDD8yUSAOfYMk6QNHpOmgAAHtT8PcrMkGqFoVvu6BRRpmNITyGmBvj2+x4sqamngUJLomE8dEC3utqB1Y0cllVZuRXIxtedpKUhp4AITklb2JUtAnH9ynPY9q9VsvGEpiyn3Vxq3Ob8ALiM0zOAmL1xAqsUFgiZs8Y8HxNgELR1vI/0XWdUbIurVwSf+brtCvuU2Av29DhHl027oczvu8Dpu/Q==
+          - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPfsbIkh9bkNwSkfaYL1f4AsldqTJtRLtQg/0NQtooLn
+          - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEX9caKaNUKmZkuKklBy0sd0ihtlqQ72PQyhvolsBp4d
+          - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIETYGpiFzqKs9aovN/FuRBRMiOiPUmNDTlC/5bXBX7pw
+          - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMxGA2Ke23q7AuHzU6e1BHCB1alKkELWAQXka4Cediuj
+          - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINyvDQOwmGa6dd9XXHq+kzQl+p2P1cAVfU2UKBhES16p
+          # Keys from https://github.com/tmattio.keys (uncomment to remove):
           - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGXrZr9NuMonCWsNhyb+4KD6sTBLyVKLkjpCo5QtqOQS thibaut.mattio@gmail.com
-
+          # Keys from https://github.com/punchagan.keys (uncomment to remove):
+          - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC3WHBw3JpSbB1Nzm9kj+djxgZZu5FHsKwrAbpiqyA9hgvZr5u6c5L4zttfPN7wtwKEUNQiXw1q+bnIbJnnMybXENvf+LeB/Jr2RAk2C6rbBTHx2zKunv4cXL9y90wgVaSc/MiEIAvhtkyktI4jy8usSMDibBCtsKK0JEnb+Ft5goBgl3Y97UkX9Qc9TfbXYL/ILu9iNMYVc8O8YviFGVS9vMw9cB1gZBoPOLmFE9mO5OZMNN8G4tyqTqTkbMF746L1XLscb/JAJM0TAwUnoSZv5997nTjQKIxuRqR3ttBV0aoKlgEQRqtHmWnSkm7lWfQyUCLnsJ4lmyuPowGS3EMRXnX8PxnKx0uA4T7UJS0e45iGXR4witeqwDQ5aCvwdFVDfXL61PIsvu+7aptQ/ON9PnEqypzmJWHjxMyXc2bwoXEQ2ER8dMlJ4IzylCV3NhxS/9MhqyWXDOB7Vi+cfbRoQreYir3FkgeNC4XIyU1FT6YcdtvF987Akml/K+4xVmnHb5ebjZmMbym7V2+50lCRzsY5z0Nwct6TxQ32EGCnZ2u8m77pMezqy7f8Qg8wXkxKoU9G460CT70XJPymQ/p6EKXb+IevCzUy8BqJxdSJpLY0Rs0HlBlhmIsLOtS8V5TzD19o8/P/KdlY5kjrCgTXWWOHNcO69fzdH09bHL0HbQ==
+          - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDFOtgwQt/J/i4NZsPEf8t7IMFldot7V1q/yRdr7hPgZRLxElK8hNvzC7V0UyTe82ugAxb5wW5RaVYtMy/EGsqRKjZZ8Xm3BblEpCW/BMeGMUSIvWsJ0U3uaUSk6AObIOETuzP3G7MiRlq/vhjIbjsUwvV5kKcgoi9yMVZDRZt7M/N6FV85djOQBa/X7Qzv8T9Gg1x+P98DKoGGDhMm7oS/eM038DJTCDCYNThPEVjpg7JdUbsryj2VxFT6FVSmx8cRPe6pTZLHLurXicR1CtQ5gxD6TXUMx+HLW4UFsEA/rgeWA0KGdO4WVoKiICfzfvSxsI+OOKJrcmuHI26Moj75tFZSHPXqreN5V+8Pj3GzOKE9JudTudjn0xAdOxJTX19qYaqmVwliTfMFCn3O3qtFSXhKFzFvntceIJ/I596Hbh8f9hqNmkZNb/2Ipb2xx5ew1RKjuTklaVLs/LTOuQ/imwhFs/Y4BN2A9vAjBt7X/LUCnG3uboR132dQ0mSsKoc=
+          # Keys from https://github.com/tmcgilchrist.keys (uncomment to remove):
+          - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBSeb8PYFLDySZoggO3QvVzynZ7NCQvqdcbBfPvVWKsL timmcgil@gmail.com
+          # Keys from https://github.com/mtelvers.keys (uncomment to remove):
+          # - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA7UrJmBFWR3c7jVzpoyg4dJjON9c7t9bT9acfrj6G7i
+          - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH5npSMmdCLgei8U24DtyjkCcZaZsjvqd6SZ2gGhsSTD
+          # Keys from unknown (uncomment to remove):
+          - ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAkS75+eHN9Fk1BumLcuFEI/r6CAR/i7H+lqZ20wf8DBv0grUvN+2vA/yw4We5RvptoB7EBxDElNPMp85xiKH4prRRhTrTa2TjhNWPwu6sY4f7lUYzIqsBhCQBRGjmtpd7/Eab5NCrXWjtJmUhP9JTFVfMEqubemIR5Xfx9xDKFLCLClfgEZnhnMTjKe902xq0M0eKg0ZXnEsMFs1siMzj2dyifNfDMSDMhyLD6i0zoPs2nE7breQIVFNnAjuoynhnR2aWH7KHi3C4BehDxcgRw0qe2LsJc2ncFl7NO/tHPk1iewkJv2jwuTO3EJBPDCTTPcWgefjT8tF+Kydp+LmI+w==
