@@ -1,0 +1,144 @@
+#!/bin/bash
+#
+# Archive old per-day job-log directories out of hot SSD docker volumes
+# into cold HDD storage at $ARCHIVE_ROOT, leaving an absolute symlink in
+# place so the CI services (which bind-mount /archive read-only) keep
+# serving the archived logs transparently.
+#
+# Passes:
+#  1. age-based: every date dir older than AGE_DAYS is moved
+#  2. pressure:  while SSD > SSD_MAX_PCENT, archive progressively younger
+#                dirs down to a floor of MIN_AGE_DAYS
+#  3. fallback:  while /archive > ARCHIVE_MAX_PCENT, remove the oldest
+#                archived date dir (and the dangling SSD symlink)
+#
+# Installed by ansible: cron-scripts/archive-log -> /etc/cron.hourly/archive-log
+
+set -euo pipefail
+
+ARCHIVE_ROOT=/archive
+AGE_DAYS={{ archive_age_days | default(30) }}
+SSD_MAX_PCENT=90
+ARCHIVE_MAX_PCENT=90
+MIN_AGE_DAYS=3
+MAX_PER_RUN={{ archive_max_per_run | default(20) }}
+
+VOLUMES=(
+{% for v in volumes %}  {{ v }}
+{% endfor %})
+
+DATE_RE='^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+moved=0
+
+log() { systemd-cat -t archive-log echo "$@"; }
+
+if ! mountpoint -q "$ARCHIVE_ROOT"; then
+    log "ERROR: $ARCHIVE_ROOT not mounted, aborting"
+    exit 1
+fi
+
+DOCKER_ROOT=$(docker info --format {% raw %}'{{.DockerRootDir}}'{% endraw %})
+
+ssd_pct()     { df --output=pcent "$DOCKER_ROOT"  | tail -1 | tr -dc '0-9'; }
+archive_pct() { df --output=pcent "$ARCHIVE_ROOT" | tail -1 | tr -dc '0-9'; }
+cutoff_age()  { date -d "$1 days ago" +%Y-%m-%d; }
+
+archive_one() {
+    # $1 = volume name, $2 = absolute path to source date dir
+    local vol="$1" src="$2"
+    local name; name=$(basename "$src")
+    local dst_base="$ARCHIVE_ROOT/$vol/var/job"
+    local dst="$dst_base/$name"
+    local tmp="$dst_base/.$name.partial"
+
+    mkdir -p "$dst_base"
+
+    if [ -e "$dst" ] && [ ! -L "$dst" ]; then
+        # Prior run was interrupted after copy but before src rm
+        log "$vol/$name: destination already archived, replacing source with symlink"
+        rm -rf "$src"
+        ln -sfn "$dst" "$src"
+        return 0
+    fi
+
+    log "$vol/$name: archiving"
+    rm -rf "$tmp"
+    if ! cp -a "$src" "$tmp"; then
+        log "$vol/$name: cp failed; leaving source intact"
+        rm -rf "$tmp"
+        return 1
+    fi
+    mv -T "$tmp" "$dst"
+    rm -rf "$src"
+    ln -sfn "$dst" "$src"
+    moved=$((moved + 1))
+    return 0
+}
+
+archive_in_volume() {
+    # $1 = volume, $2 = cutoff YYYY-MM-DD (archives dirs strictly older)
+    local vol="$1" cutoff="$2"
+    local src_base
+    src_base=$(docker volume inspect --format {% raw %}'{{.Mountpoint}}'{% endraw %} "$vol" 2>/dev/null)/var/job || {
+        log "$vol: docker volume inspect failed, skipping"; return 0
+    }
+    [ -d "$src_base" ] || { log "$vol: $src_base missing, skipping"; return 0; }
+
+    local entry name
+    for entry in "$src_base"/*; do
+        [ -e "$entry" ] || continue
+        name=$(basename "$entry")
+        [[ "$name" =~ $DATE_RE ]] || continue
+        [ -L "$entry" ] && continue          # already archived
+        [ -d "$entry" ] || continue
+        [[ "$name" < "$cutoff" ]] || continue
+        [ "$moved" -ge "$MAX_PER_RUN" ] && return 0
+        archive_one "$vol" "$entry" || true
+    done
+}
+
+# ----- Pass 1: age-based -----
+cutoff=$(cutoff_age "$AGE_DAYS")
+log "start: ssd=$(ssd_pct)% archive=$(archive_pct)% cutoff<$cutoff age=$AGE_DAYS cap=$MAX_PER_RUN"
+for vol in "${VOLUMES[@]}"; do
+    archive_in_volume "$vol" "$cutoff"
+    [ "$moved" -ge "$MAX_PER_RUN" ] && break
+done
+
+# ----- Pass 2: pressure-based -----
+floor=$(cutoff_age "$MIN_AGE_DAYS")
+age_step=$AGE_DAYS
+while [ "$(ssd_pct)" -gt "$SSD_MAX_PCENT" ] && [ "$moved" -lt "$MAX_PER_RUN" ]; do
+    if [ "$age_step" -gt $((MIN_AGE_DAYS + 5)) ]; then
+        age_step=$((age_step - 5))
+    else
+        age_step=$MIN_AGE_DAYS
+    fi
+    cutoff=$(cutoff_age "$age_step")
+    [[ "$cutoff" > "$floor" ]] && cutoff="$floor"
+    log "ssd=$(ssd_pct)% >${SSD_MAX_PCENT}%: pressure-archive <$cutoff"
+    before=$moved
+    for vol in "${VOLUMES[@]}"; do
+        archive_in_volume "$vol" "$cutoff"
+        [ "$moved" -ge "$MAX_PER_RUN" ] && break
+    done
+    [ "$moved" -eq "$before" ] && break
+    [ "$age_step" -le "$MIN_AGE_DAYS" ] && break
+done
+
+# ----- Pass 3: /archive full fallback -----
+while [ "$(archive_pct)" -gt "$ARCHIVE_MAX_PCENT" ]; do
+    oldest=$(find "$ARCHIVE_ROOT"/*/var/job -mindepth 1 -maxdepth 1 \
+        -type d -regextype posix-extended \
+        -regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}$' 2>/dev/null | sort | head -1) || true
+    [ -z "${oldest:-}" ] && break
+    rel=${oldest#$ARCHIVE_ROOT/}
+    vol=${rel%%/var/job/*}
+    dname=$(basename "$oldest")
+    src_link=$(docker volume inspect --format {% raw %}'{{.Mountpoint}}'{% endraw %} "$vol" 2>/dev/null)/var/job/$dname
+    log "archive=$(archive_pct)% >${ARCHIVE_MAX_PCENT}%: removing $oldest"
+    rm -rf "$oldest"
+    [ -L "$src_link" ] && rm "$src_link"
+done
+
+log "end: moved=$moved ssd=$(ssd_pct)% archive=$(archive_pct)%"

@@ -48,17 +48,86 @@ prometheus.ci.dev {
 }
 
 opam-repo.ci.ocaml.org {
-	handle /metrics {
-		basic_auth bcrypt {
-			prometheus {{ prometheus_password }}
+	route {
+		# Same crawler/bot protection as the web UI host; the engine web
+		# server on :8080 is reachable directly here, so crawlers hitting
+		# this host would flood the engine without touching opam-repo-ci-web.
+		@badbots header_regexp User-Agent (?i)(bot|crawl|spider|scrap|googleother|gptbot|chatgpt|oai-searchbot|ccbot|claudebot|anthropic|bytespider|petalbot|semrush|ahrefs|mj12|dotbot|dataforseo|meta-externalagent|imagesift|python-requests|go-http-client|libwww|okhttp|curl|wget)
+		respond @badbots 403
+
+		handle /robots.txt {
+			respond "User-agent: *
+Disallow: /job/
+" 200
 		}
+
+		handle /metrics {
+			basic_auth bcrypt {
+				prometheus {{ prometheus_password }}
+			}
+			reverse_proxy opam-repo-ci:8080
+		}
+
+		# Backstop: cap the engine dashboard's /job/ log pages against crawlers
+		# walking the whole build history (HEAD-crawl of /job/ observed 2026-06-17).
+		rate_limit {
+			zone engine_job {
+				match {
+					path /job/*
+				}
+				key    static
+				events 10
+				window 1s
+			}
+		}
+
 		reverse_proxy opam-repo-ci:8080
 	}
-	reverse_proxy opam-repo-ci:8080
 }
 
 opam.ci.ocaml.org {
-	reverse_proxy opam-repo-ci-web:8090
+	route {
+		# Block declared crawlers/scrapers and AI bots by User-Agent.
+		# NOTE: the bulk load is a rotating residential-proxy farm that
+		# spoofs real browser UAs; UA-blocking cannot stop that - it needs
+		# a rate-limit plugin or upstream WAF. This catches the polite/declared bots.
+		@badbots header_regexp User-Agent (?i)(bot|crawl|spider|scrap|googleother|gptbot|chatgpt|oai-searchbot|ccbot|claudebot|anthropic|bytespider|petalbot|semrush|ahrefs|mj12|dotbot|dataforseo|meta-externalagent|imagesift|python-requests|go-http-client|libwww|okhttp|curl|wget)
+		respond @badbots 403
+
+		# Scraper farm heuristic: Sec-Fetch-Site:none is a fresh/typed navigation,
+		# which a real browser never sends together with a Referer. Real in-site
+		# clicks use same-origin and GitHub links use cross-site, so they pass.
+		@spoofnav {
+			header Sec-Fetch-Site none
+			header Referer *
+		}
+		respond @spoofnav 429
+
+		# Ask polite crawlers not to walk the expensive per-build pages.
+		handle /robots.txt {
+			respond "User-agent: *
+Disallow: /github/
+" 200
+		}
+
+		# Backstop: global cap on the expensive per-build pages so the engine
+		# cannot be overwhelmed even if the crawl adapts past @spoofnav.
+		# key static => one shared bucket regardless of source-IP rotation.
+		# NB: Caddy path '*' does not cross '/', so '*/variant/*' (not
+		# '/github/*/commit/*/variant/*') is needed to match the 2-segment owner/repo.
+		rate_limit {
+			zone opam_variant {
+				match {
+					path */variant/*
+				}
+				key    static
+				events 10
+				window 1s
+			}
+		}
+
+		reverse_proxy opam-repo-ci-web:8090
+	}
 }
 
 ci.mirage.io {

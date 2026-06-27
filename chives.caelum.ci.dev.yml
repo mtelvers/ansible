@@ -53,6 +53,7 @@
         - tarides-deployer-ssh-key
         - tarides-deployer-submission-cap
         - tarides-deployer-webhook-secret
+        - opam-health-check-cap
     - name: create caddy directory
       file:
         path: /etc/caddy
@@ -63,16 +64,78 @@
         dest: /etc/caddy/Caddyfile
       notify:
         - restart caddy
-    - name: install clear log script
+    - name: install RAID/XFS tooling for /archive
+      apt:
+        name:
+          - mdadm
+          - xfsprogs
+        state: present
+        update_cache: yes
+    - name: check whether /dev/sdc already has RAID metadata
+      command: mdadm --examine /dev/sdc
+      register: md_examine
+      changed_when: false
+      failed_when: false
+    - name: assemble existing RAID array
+      command: mdadm --assemble --scan
+      when: md_examine.rc == 0
+      changed_when: false
+      failed_when: false
+    - name: create new RAID1 /dev/md0 across sdc + sdd
+      # sdc and sdd are blank 7.3T disks dedicated to /archive.
+      command: mdadm --create /dev/md0 --level=1 --raid-devices=2 --metadata=1.2 --run /dev/sdc /dev/sdd
+      args:
+        creates: /dev/md0
+      when: md_examine.rc != 0
+    - name: persist mdadm config
+      shell: |
+        set -e
+        mkdir -p /etc/mdadm
+        mdadm --detail --scan > /etc/mdadm/mdadm.conf
+        update-initramfs -u
+      args:
+        creates: /etc/mdadm/mdadm.conf
+    - name: make XFS filesystem on /dev/md0
+      filesystem:
+        fstype: xfs
+        dev: /dev/md0
+    - name: create /archive mount point
+      file:
+        path: /archive
+        state: directory
+        mode: "0755"
+    - name: mount /archive
+      mount:
+        path: /archive
+        src: /dev/md0
+        fstype: xfs
+        opts: defaults,nofail
+        state: mounted
+    - name: create per-volume archive dirs
+      file:
+        path: "/archive/{{ item }}/var/job"
+        state: directory
+        mode: "0755"
+      loop:
+        - ocaml-ci_data
+        - opam-repo-ci_data
+        - infra_mirage-ci_data
+    - name: install archive-log script
       template:
-        src: cron-scripts/clear-log
-        dest: /etc/cron.hourly/clear-log
+        src: cron-scripts/archive-log
+        dest: /etc/cron.hourly/archive-log
         mode: u=rwx,g=rx,o=rx
       vars:
         volumes:
           - ocaml-ci_data
           - opam-repo-ci_data
-          - mirage-ci_data
+          - infra_mirage-ci_data
+        archive_age_days: 30
+        archive_max_per_run: 20
+    - name: remove superseded clear-log script
+      file:
+        path: /etc/cron.hourly/clear-log
+        state: absent
     - name: install docker-prune script
       copy:
         src: cron-scripts/docker-prune
@@ -96,7 +159,7 @@
           - version: "3.7"
             services:
               caddy:
-                image: caddy
+                image: ocurrent/caddy-ratelimit:live
                 deploy:
                   mode: global
                 ports:
@@ -145,6 +208,7 @@
                 command: --ocluster-cap /run/secrets/mirage-ci-submission-cap --github-webhook-secret-file /run/secrets/mirage-ci-webhook-secret --github-token-file /run/secrets/mirage-ci-github-token --test-mirage-4 mirage,skeleton,dev,overlay
                 volumes:
                   - 'mirage-ci_data:/var/lib/ocurrent'
+                  - '/archive:/archive:ro'
                 secrets:
                   - mirage-ci-github-token
                   - mirage-ci-submission-cap
@@ -231,6 +295,46 @@
                     mode: 0400
                 sysctls:
                   - 'net.ipv4.tcp_keepalive_time=60'
+              opam-health-check:
+                image: ocurrent/opam-health-check:live
+                deploy:
+                  endpoint_mode: dnsrr
+                command: --connect /run/secrets/opam-health-check-cap /data/main
+                volumes:
+                  - 'opam-health-check-data:/data'
+                  - 'opam-health-check-config:/root/.config/opam-health-check'
+                secrets:
+                  - opam-health-check-cap
+              opam-health-check-freebsd:
+                image: ocurrent/opam-health-check:live
+                deploy:
+                  endpoint_mode: dnsrr
+                command: --connect /run/secrets/opam-health-check-cap /data/freebsd
+                volumes:
+                  - 'opam-health-check-data:/data'
+                  - 'opam-health-check-config:/root/.config/opam-health-check'
+                secrets:
+                  - opam-health-check-cap
+              opam-health-check-windows:
+                image: ocurrent/opam-health-check:live
+                deploy:
+                  endpoint_mode: dnsrr
+                command: --connect /run/secrets/opam-health-check-cap /data/windows
+                volumes:
+                  - 'opam-health-check-data:/data'
+                  - 'opam-health-check-config:/root/.config/opam-health-check'
+                secrets:
+                  - opam-health-check-cap
+              opam-health-check-oxcaml:
+                image: ocurrent/opam-health-check:live
+                deploy:
+                  endpoint_mode: dnsrr
+                command: --connect /run/secrets/opam-health-check-cap /data/oxcaml
+                volumes:
+                  - 'opam-health-check-data:/data'
+                  - 'opam-health-check-config:/root/.config/opam-health-check'
+                secrets:
+                  - opam-health-check-cap
             volumes:
               prometheus-data:
               grafana-storage:
@@ -249,6 +353,10 @@
               base-images-capnp-secrets:
                 external: true
               tarides-deployer-data:
+                external: true
+              opam-health-check-data:
+                external: true
+              opam-health-check-config:
                 external: true
             secrets:
               mirage-ci-github-token:
@@ -290,6 +398,8 @@
               tarides-deployer-submission-cap:
                 external: true
               tarides-deployer-webhook-secret:
+                external: true
+              opam-health-check-cap:
                 external: true
             networks:
               ocaml-ci_default:

@@ -13,7 +13,6 @@ x86-bm-d1.sw.ocaml.org
 c2-1.equinix.ci.dev
 c2-2.equinix.ci.dev
 ocaml-multicore.ci.dev
-check.ci.ocaml.org
 ocaml.ci.dev ansible_host=128.232.124.253
 opam.ci.ocaml.org
 opam-4.ocaml.org
