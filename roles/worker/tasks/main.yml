@@ -73,7 +73,7 @@
 
 - name: pause worker
   delegate_to: localhost
-  command: ocluster-admin --connect /run/secrets/admin.cap pause --auto-create --wait {{ builder_pool }} {{ inventory_hostname }}
+  command: ocluster-admin --connect /home/mtelvers/admin.cap pause --auto-create --wait {{ builder_pool }} {{ inventory_hostname }}
   when: ocluster_worker.changed
 
 - name: stop systemd service
@@ -93,6 +93,6 @@
 
 - name: unpause worker
   delegate_to: localhost
-  command: ocluster-admin --connect /run/secrets/admin.cap unpause --auto-create {{ builder_pool }} {{ inventory_hostname }}
+  command: ocluster-admin --connect /home/mtelvers/admin.cap unpause --auto-create {{ builder_pool }} {{ inventory_hostname }}
   when:
     - paused is undefined

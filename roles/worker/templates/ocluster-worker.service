@@ -3,7 +3,7 @@ Description=OCluster worker
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/ocluster-worker -c /etc/ocluster/pool.cap --name='{{ ansible_host }}' --obuilder-store={{ obuilder_store }} --fast-sync --allow-push ocurrentbuilder/staging,ocurrent/opam-staging --prune-threshold={{ prune_threshold }} --obuilder-prune-threshold={{ prune_threshold }} --capacity={{ capacity }} --state-dir={{ state_dir }} {{ additional_metrics }} -v
+ExecStart=/usr/local/bin/ocluster-worker -c /etc/ocluster/pool.cap --name='{{ ansible_hostname }}' --obuilder-store={{ obuilder_store }} --fast-sync --allow-push ocurrentbuilder/staging,ocurrent/opam-staging --prune-threshold={{ prune_threshold }} --obuilder-prune-threshold={{ prune_threshold }} --capacity={{ capacity }} --state-dir={{ state_dir }} {{ additional_metrics }} {% if obuilder_extra is defined %} {{ obuilder_extra }} {% endif %} -v
 Restart=always
 RestartSec=60
 {% if extras is defined -%}

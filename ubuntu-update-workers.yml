@@ -7,7 +7,7 @@
 
 - hosts: ubuntubuilders
   name: Install Ubunutu updates
-  serial: 1
+  serial: 10
   roles:
     - ubuntu
 

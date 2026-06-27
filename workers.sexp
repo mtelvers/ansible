@@ -499,8 +499,8 @@
 
   (
    (name worker.yml)
-   (label riscv-bm-a1.sw)
-   (limit (riscv-bm-a1.sw.ocaml.org))
+   (label riscv-bm-01.sw)
+   (limit (riscv-bm-01.sw.ocaml.org))
    (vars /run/secrets/worker.yml)
    (deps (
      roles/hyperthreading/tasks/main.yml
@@ -513,8 +513,8 @@
 
   (
    (name worker.yml)
-   (label riscv-bm-a2.sw)
-   (limit (riscv-bm-a2.sw.ocaml.org))
+   (label riscv-bm-02.sw)
+   (limit (riscv-bm-02.sw.ocaml.org))
    (vars /run/secrets/worker.yml)
    (deps (
      roles/hyperthreading/tasks/main.yml
@@ -527,8 +527,8 @@
 
   (
    (name worker.yml)
-   (label riscv-bm-a3.sw)
-   (limit (riscv-bm-a3.sw.ocaml.org))
+   (label riscv-bm-03.sw)
+   (limit (riscv-bm-03.sw.ocaml.org))
    (vars /run/secrets/worker.yml)
    (deps (
      roles/hyperthreading/tasks/main.yml
@@ -541,8 +541,8 @@
 
   (
    (name worker.yml)
-   (label riscv-bm-a4.sw)
-   (limit (riscv-bm-a4.sw.ocaml.org))
+   (label riscv-bm-04.sw)
+   (limit (riscv-bm-04.sw.ocaml.org))
    (vars /run/secrets/worker.yml)
    (deps (
      roles/hyperthreading/tasks/main.yml
