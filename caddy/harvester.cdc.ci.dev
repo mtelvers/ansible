@@ -1,0 +1,3 @@
+observer.ocamllabs.io {
+	reverse_proxy http://observer:8080
+}

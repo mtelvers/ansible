@@ -1,0 +1,83 @@
+---
+
+- hosts: harvester.cdc.ci.dev
+  name: Set up Docker
+  roles:
+    - docker
+    - deployer-key
+
+- hosts: harvester.cdc.ci.dev
+  name: Set up SwarmKit
+  tasks:
+    - docker_swarm:
+        listen_addr: "127.0.0.1:2377"
+        advertise_addr: "127.0.0.1:2377"
+
+- hosts: harvester.cdc.ci.dev
+  tasks:
+    - name: copy Docker secrets
+      docker_secret:
+        name: "{{ item }}"
+        data: "{{ lookup('vars', item) | b64encode }}"
+        data_is_b64: true
+      loop:
+        - ocaml-org-deployer-slack
+        - ocurrent-observer-oauth
+    - name: create caddy directory
+      file:
+        path: /etc/caddy
+        state: directory
+    - name: configure caddy
+      template:
+        src: caddy/harvester.cdc.ci.dev
+        dest: /etc/caddy/Caddyfile
+    - name: Set up infrastructure stack
+      docker_stack:
+        name: infra
+        prune: yes
+        compose:
+          - version: "2.1"
+            services:
+              caddy:
+                image: caddy
+                restart: always
+                ports:
+                  - 80:80
+                  - 443:443
+                volumes:
+                  - "/etc/caddy:/etc/caddy:ro"
+                  - "caddy_data:/data"
+                  - "caddy_config:/config"
+                networks:
+                  - observe
+              observer:
+                image: ocurrent/ocurrent-observer:live
+                command: --slack /run/secrets/ocaml-org-deployer-slack --github-oauth /run/secrets/ocurrent-observer-oauth www.ocaml.org,opam.ocaml.org,images.ci.ocaml.org,deploy.ci.ocaml.org,opam-repo.ci.ocaml.org,watch.ocaml.org,staging.docs.ci.ocamllabs.io,docs.ci.ocaml.org,staging.ocaml.org,v2.ocaml.org,ocaml.ci.dev,deploy.ci.dev,check.ci.ocaml.org
+                restart: always
+                volumes:
+                  - "observer_data:/var/lib/ocurrent-observer"
+                sysctls:
+                  - "net.ipv4.tcp_keepalive_time=60"
+                secrets:
+                  - ocaml-org-deployer-slack
+                  - ocurrent-observer-oauth
+                networks:
+                  - observe
+            volumes:
+              observer_data:
+              caddy_data:
+              caddy_config:
+            networks:
+              observe:
+                name: observe
+                enable_ipv6: true
+                ipam:
+                  config:
+                    - subnet: 2a00:1c10:3:63b::/64
+                      gateway: 2a00:1c10:3:63b::1
+            secrets:
+              ocaml-org-deployer-slack:
+                external: true
+              ocurrent-observer-oauth:
+                external: true
+
