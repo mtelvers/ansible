@@ -8,14 +8,6 @@ scrape_configs:
     static_configs:
     - targets: ['localhost:9090']
 
-  - job_name: 'ci3'
-    static_configs:
-    - targets: ['172.18.0.1:9091']
-
-  - job_name: 'ci4'
-    static_configs:
-    - targets: ['ci4.ocamllabs.io:9100']
-
   - job_name: 'scheduler'
     static_configs:
     - targets: ['scheduler:9090']
@@ -66,21 +58,18 @@ scrape_configs:
 
   # Windows
 
-{% for builder in range(1, 5) %}
-  - job_name: ltsc2022-{{ builder }}
-    metrics_path: /pool/windows-x86_64/worker/ltsc2022-{{ builder }}/metrics
+{% for builder in range(1, 4) %}
+  - job_name: ltsc2025-{{ builder }}
+    metrics_path: /pool/windows-x86_64/worker/ltsc2025-{{ builder }}/metrics
     static_configs:
     - targets: ['scheduler:9090']
 
 {% endfor %}
 
-{% for builder in range(1, 5) %}
-  - job_name: ltsc2019-{{ builder }}
-    metrics_path: /pool/windows-1809-x86_64/worker/ltsc2019-{{ builder }}/metrics
+  - job_name: ltsc2019-1
+    metrics_path: /pool/windows-1809-x86_64/worker/ltsc2019-1/metrics
     static_configs:
     - targets: ['scheduler:9090']
-
-{% endfor %}
 
   # Mac
 
@@ -99,21 +88,8 @@ scrape_configs:
 
   # FreeBSD
 
-{% for builder in 'summer', 'spring' %}
-  - job_name: {{ builder }}
-    metrics_path: /pool/freebsd-x86_64/worker/{{ builder }}/metrics
+  - job_name: rosemary
+    metrics_path: /pool/freebsd-x86_64/worker/rosemary/metrics
     static_configs:
     - targets: ['scheduler:9090']
-
-{% endfor %}
-
-  # Windows amd64
-
-{% for builder in 'alpha', 'odawa' %}
-  - job_name: {{ builder }}
-    metrics_path: /pool/windows-amd64/worker/{{ builder }}/metrics
-    static_configs:
-    - targets: ['scheduler:9090']
-
-{% endfor %}
 
