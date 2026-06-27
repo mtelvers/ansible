@@ -1,4 +1,4 @@
-docs.ci.ocaml.org {
+sage.caelum.ci.dev {
 	handle /host/metrics {
 		basic_auth bcrypt {
 			prometheus {{ prometheus_password }}
@@ -9,6 +9,6 @@ docs.ci.ocaml.org {
 	reverse_proxy docs-ci:8080
 }
 
-docs-data.ocaml.org {
+sage.ci.dev {
 	reverse_proxy html-data-website:80
 }

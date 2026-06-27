@@ -19,7 +19,7 @@ opam-4.ocaml.org
 opam-5.ocaml.org
 get.dune.build ansible_host=128.232.124.216
 ci.mirageos.org
-sage.caelum.ci.dev builder_pool=docs-pipeline capacity=8 obuilder_store=overlayfs:/var/cache/obuilder
+sage.caelum.ci.dev ansible_host=128.232.124.184 builder_pool=docs-pipeline capacity=8 obuilder_store=overlayfs:/var/cache/obuilder
 
 [all:vars]
 state_dir=/var/cache/obuilder/ocluster

@@ -1,10 +1,22 @@
 
-- hosts: docs.ci.ocaml.org
+- hosts: sage.caelum.ci.dev
+  name: Set up Docker
+  roles:
+    - role: docker
+    - role: deployer-key
+    - role: worker
+      additional_metrics: ""
+
+- hosts: sage.caelum.ci.dev
   name: Configure docs.ci controller host
   tasks:
     - docker_swarm:
         listen_addr: "127.0.0.1:2377"
         advertise_addr: "127.0.0.1:2377"
+    - name: create home directory
+      file:
+        path: /home/docs-ci/data
+        state: directory
     - name: create caddy directory
       file:
         path: /etc/caddy
@@ -15,6 +27,26 @@
         src: caddy/docs.ci.ocaml.org
       notify:
         - restart caddy
+    - name: create nginx directory
+      file:
+        path: /etc/nginx
+        state: directory
+    - name: configure nginx
+      copy:
+        dest: /etc/nginx/default.conf
+        content: |
+          server {
+            listen 80;
+            server_name localhost;
+          
+            location / {
+                root /usr/share/nginx/html;
+                index index.html index.htm;
+                autoindex on;
+                autoindex_exact_size off;  # Show human-readable file sizes
+                autoindex_localtime on;    # Show local time instead of GMT
+            }
+          }
     - name: copy Docker secrets
       docker_secret:
         name: "{{ item }}"
@@ -23,6 +55,7 @@
       loop:
         - docs-ci-submission-cap
         - docs-ci-github-oauth
+        - staging-docs-ci-github-oauth
     - name: set up docs.ocaml.org stack
       docker_stack:
         name: infra
@@ -32,7 +65,7 @@
             secrets:
               docs-ci-submission-cap:
                 external: true
-              docs-ci-github-oauth:
+              staging-docs-ci-github-oauth:
                 external: true
             services:
               caddy:
@@ -45,25 +78,25 @@
                   - caddy_data:/data
                   - caddy_config:/config
                 extra_hosts:
-                  - "docs.ci.ocaml.org:147.75.198.157"
+                  - "docs.ci.ocaml.org:128.232.124.184"
               init:
-                image: ocurrent/docs-ci-init:live
+                image: ocurrent/docs-ci-init:staging
                 environment:
                   - KEYFILE=/ssh/id_ed25519
                   - KEYTYPE=ed25519
                 volumes:
                   - 'ssh-credentials:/ssh/'
                 extra_hosts:
-                  - "docs.ci.ocaml.org:147.75.198.157"
+                  - "docs.ci.ocaml.org:128.232.124.184"
               storage-server:
-                image: ocurrent/docs-ci-storage-server:live
+                image: ocurrent/docs-ci-storage-server:staging
                 environment:
                   - PUBLIC_KEY_FILE=/ssh/id_ed25519.pub
                 ports:
                   - "2222:22"
                 volumes:
                   - 'ssh-credentials:/root/.ssh/'
-                  - 'docs-data:/data'
+                  - '/home/docs-ci/docs:/data'
               html-data-website:
                 restart: on-failure
                 image: nginx
@@ -71,40 +104,42 @@
                   bash -c "rm -rf /usr/share/nginx/html && mkdir /usr/share/nginx/html
                   && ln -s /data/html-live/html-raw /usr/share/nginx/html/live
                   && ln -s /data/html-current/html-raw /usr/share/nginx/html/current
+                  && ln -s /data/linked-live/linked /usr/share/nginx/html/linked-live
+                  && ln -s /data/linked-current/linked /usr/share/nginx/html/linked-current
                   && nginx -g 'daemon off;'"
                 volumes:
-                  - 'docs-data:/data/'
+                  - '/home/docs-ci/docs:/data'
+                  - /etc/nginx:/etc/nginx/conf.d:ro
                 extra_hosts:
-                  - "docs.ci.ocaml.org:147.75.198.157"
+                  - "docs.ci.ocaml.org:128.232.124.184"
               docs-ci:
-                image: ocurrent/docs-ci:live
+                image: ocurrent/docs-ci:staging
                 secrets:
                   - 'docs-ci-submission-cap'
-                  - 'docs-ci-github-oauth'
+                  - 'staging-docs-ci-github-oauth'
                 depends_on:
                   - "storage-server"
                 command:
                   - --confirm=above-average
                   - --ocluster-submission=/run/secrets/docs-ci-submission-cap
-                  - --github-oauth=/run/secrets/docs-ci-github-oauth
-                  - --ssh-host=c2-1.equinix.ci.dev
+                  - --github-oauth=/run/secrets/staging-docs-ci-github-oauth
+                  - --ssh-host=sage.caelum.ci.dev
                   - --ssh-port=2222
                   - --ssh-user=root
                   - --ssh-privkey=/ssh/id_ed25519
                   - --ssh-pubkey=/ssh/id_ed25519.pub
                   - --ssh-folder=/data
-                  - --jobs=18
-                    #                  - --filter=uri
-                  - --limit=1000
+                  #- --filter=uri
+                  #- --limit=10
                   - --capnp-listen-address=tcp:0.0.0.0:9000
                   - --capnp-public-address=tcp:docs.ci.ocaml.org:8102
-                  - --voodoo-branch=main
                   - --migration-path=/migrations
+                  - --cache-threshold=100
                 init: true
                 restart: on-failure         # (wait for the scheduler to write the submission cap)
                 ports:
-                - 8080:8080 # HTTP UI
-                - 8102:9000 # Capnp
+                  - 8080:8080 # HTTP UI
+                  - 8102:9000 # Capnp
                 volumes:
                   - 'docs-ci-data:/var/lib/ocurrent'
                   - "capnp-secrets:/capnp-secrets"
@@ -112,11 +147,10 @@
                 environment:
                   - OCAMLRUNPARAM=b
                 extra_hosts:
-                  - "docs.ci.ocaml.org:147.75.198.157"
+                  - "docs.ci.ocaml.org:128.232.124.184"
             volumes:
               docs-ci-data:
               capnp-secrets:
-              docs-data:
               ssh-credentials:
               caddy_data:
                 external: true
