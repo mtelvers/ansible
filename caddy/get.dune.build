@@ -1,21 +1,32 @@
-download.dune.ci.dev {
-        redir https://get.dune.build{uri} permanent
+# All dune.build hostnames are fronted by Cloudflare and reach this host over a
+# Cloudflare Tunnel (cloudflared -> these services). Caddy serves them on plain
+# HTTP :80 only -- no TLS, no ACME, no certificates on this origin at all.
+#   get                       -> tunnel -> caddy:80   (file_server below)
+#   preview / staging-preview -> tunnel -> caddy:80   (redirects below fire)
+#   nightly / staging-nightly -> tunnel -> www:80 / staging:80 directly
+#                                (Caddy blocks kept as fallback/docs; not in path)
+#
+# NB: download.dune.ci.dev / dune.ci.dev resolve to 147.75.198.157 (a different
+# host), so they are intentionally NOT handled here.
+
+http://get.dune.build {
+    root * /dune
+    file_server
+    log
 }
 
-dune.ci.dev {
-        redir https://preview.dune.build{uri} permanent
+http://preview.dune.build {
+    redir https://nightly.dune.build{uri} permanent
 }
 
-get.dune.build {
-        root * /dune
-        file_server
-	log
+http://staging-preview.dune.build {
+    redir https://staging-nightly.dune.build{uri} permanent
 }
 
-preview.dune.build {
-        reverse_proxy www:80
+http://nightly.dune.build {
+    reverse_proxy www:80
 }
 
-staging-preview.dune.build {
-        reverse_proxy staging:80
+http://staging-nightly.dune.build {
+    reverse_proxy staging:80
 }

@@ -9,6 +9,13 @@
 - hosts: get.dune.build
   name: Dune Binary Distribution
   tasks:
+
+    - name: apt packages
+      apt:
+        name:
+          - jq
+        state: present
+
     - name: Set up SwarmKit
       docker_swarm:
         listen_addr: "127.0.0.1:2377"
@@ -73,6 +80,12 @@
                 image: ocurrent/dune-binary-distribution:live
               staging:
                 image: ocurrent/dune-binary-distribution:staging
+              cloudflared:
+                image: cloudflare/cloudflared:latest
+                restart: always
+                command: tunnel --no-autoupdate run
+                environment:
+                  TUNNEL_TOKEN: "{{ cloudflared_tunnel_token }}"
             volumes:
               caddy_config:
               caddy_data:
