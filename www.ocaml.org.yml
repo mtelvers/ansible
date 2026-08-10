@@ -36,13 +36,13 @@
           server {
               server_name _;
           
-              location ^~ /.well-known/acme-challenge/ {
-                  default_type "text/plain";
+              location /.well-known/ {
                   root /var/www/html;
               }
           
-              location = /.well-known/acme-challenge/ {
-                  return 404;
+              location ~ /.well-known/acme-challenge/ {
+                  default_type "text/plain";
+                  root /var/www/html;
               }
           }
 
@@ -101,7 +101,7 @@
                   return(pipe);
                 }
               }
-              if (req.url ~ "^/\.well-known/acme-challenge/") {
+              if (req.url ~ "^/\.well-known/") {
                 set req.backend_hint = nginx;
                 return(pipe);
               }
