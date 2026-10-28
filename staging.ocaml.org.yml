@@ -57,6 +57,8 @@
                   - caddy_config:/config
               www:
                 image: ocurrent/v3.ocaml.org-server:staging
+                environment:
+                  - OCAMLORG_MCP_TRUST_XFF=true
                 sysctls:
                   - 'net.ipv4.tcp_keepalive_time=60'
             volumes:
