@@ -309,11 +309,15 @@
 
               www1:
                 image: ocurrent/v3.ocaml.org-server:live
+                environment:
+                  - OCAMLORG_MCP_TRUST_XFF=true
                 sysctls:
                   - 'net.ipv4.tcp_keepalive_time=60'
 
               www2:
                 image: ocurrent/v3.ocaml.org-server:live
+                environment:
+                  - OCAMLORG_MCP_TRUST_XFF=true
                 sysctls:
                   - 'net.ipv4.tcp_keepalive_time=60'
 
