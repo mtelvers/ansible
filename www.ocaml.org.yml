@@ -106,7 +106,7 @@
                 return(pipe);
               }
               if (req.http.host != "{{ domains[0] }}") {
-                  return (synth(301, "https://{{ domains[0] }}"));
+                  return (synth(301, "https://{{ domains[0] }}" + req.url));
               }
               if ((req.http.X-Forwarded-Proto && req.http.X-Forwarded-Proto != "https") || 
                   (req.http.Scheme && req.http.Scheme != "https")) {
